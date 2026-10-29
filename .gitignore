@@ -1,0 +1,23 @@
+# 依赖
+node_modules/
+
+# 登录态（含 Cookie，绝对不要提交）
+profile/
+
+# 运行产物
+data/log/
+data/shots/
+data/probe/
+data/reports/
+data/results.jsonl
+data/.run.lock/
+data/*.log
+
+# 本机配置（个人路径/开关），仓库里放 config.example.json 作为模板
+config.json
+
+# 事故记录（个人运维日志，不属于工具本身）
+RESTORE.md
+
+# 系统文件
+.DS_Store

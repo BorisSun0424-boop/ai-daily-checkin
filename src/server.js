@@ -1,0 +1,347 @@
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { loadConfig, saveConfig, resolveAdapters } from './config.js';
+import { createLogger } from './logger.js';
+import { today } from './util.js';
+import { readResultsJSONL } from './notify.js';
+import { scanApps } from './clients.js';
+
+const exec = promisify(execFile);
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+};
+
+const RUN_STATUS = new Set(['success', 'already']);
+const HISTORY_DAYS = 14;
+
+function lastDates(n) {
+  const out = [];
+  const d = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const t = new Date(d);
+    t.setDate(d.getDate() - i);
+    const p = (x) => String(x).padStart(2, '0');
+    out.push(`${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`);
+  }
+  return out;
+}
+
+/** 汇总前端需要的全部状态 */
+export function buildState() {
+  const cfg = loadConfig();
+  const adapters = resolveAdapters(cfg, { includeDisabled: true });
+  const records = readResultsJSONL(path.resolve('data/results.jsonl')).filter((r) => !r.dryRun);
+  const dates = lastDates(HISTORY_DAYS);
+
+  // 每平台最新一条 + 最近 N 天矩阵
+  const byPlatform = new Map();
+  for (const r of records) {
+    if (!byPlatform.has(r.id)) byPlatform.set(r.id, []);
+    byPlatform.get(r.id).push(r);
+  }
+
+  const platforms = adapters.map((a) => {
+    const list = (byPlatform.get(a.id) || []).slice().sort((x, y) => String(x.ts).localeCompare(String(y.ts)));
+    const last = list[list.length - 1] || null;
+    const matrix = {};
+    for (const d of dates) {
+      const dayRecords = list.filter((r) => r.date === d);
+      matrix[d] = dayRecords.length ? dayRecords[dayRecords.length - 1].status : null;
+    }
+    const todayRec = list.filter((r) => r.date === today()).pop() || null;
+    const pc = cfg.platforms[a.id] || {};
+    return {
+      id: a.id,
+      name: a.name,
+      kind: a.standalone || a.clientApp ? 'client' : 'web',
+      enabled: !!pc.enabled,
+      notes: a.notes || '',
+      last: last
+        ? { date: last.date, ts: last.ts, status: last.status, detail: last.detail, meta: last.meta || null, durationMs: last.durationMs }
+        : null,
+      todayStatus: todayRec ? todayRec.status : null,
+      todayDetail: todayRec ? todayRec.detail : null,
+      matrix,
+      streakInfo: last?.meta || null,
+    };
+  });
+
+  const enabled = platforms.filter((p) => p.enabled);
+  const doneToday = enabled.filter((p) => RUN_STATUS.has(p.todayStatus));
+
+  // 汇总：credits 取最近一次带 meta 的记录（WorkBuddy 累计）
+  let totalCredits = null;
+  let streak = null;
+  for (const p of platforms) {
+    if (p.last?.meta?.credits != null) totalCredits = p.last.meta.credits;
+    if (p.last?.meta?.streak != null) streak = p.last.meta.streak;
+  }
+
+  return {
+    now: new Date().toISOString(),
+    today: today(),
+    schedule: { time: cfg.schedule?.time || '08:30', randomDelayMinutes: cfg.schedule?.randomDelayMinutes ?? 25 },
+    headless: cfg.headless,
+    summary: {
+      enabledCount: enabled.length,
+      doneToday: doneToday.length,
+      totalPlatforms: platforms.length,
+      credits: totalCredits,
+      streak,
+    },
+    dates,
+    platforms,
+  };
+}
+
+async function scanClientsCached(cfg) {
+  const apps = await scanApps();
+  // 内置适配器（如 WorkBuddy）的客户端路径不在 config 里，单独带上
+  const KNOWN_CHECKIN_APPS = ['/Applications/WorkBuddy.app'];
+  const configuredApps = new Set([
+    ...KNOWN_CHECKIN_APPS.map((x) => path.resolve(x)),
+    ...Object.values(cfg?.platforms || {})
+      .map((p) => p?.app)
+      .filter(Boolean)
+      .map((x) => path.resolve(x)),
+  ]);
+  const out = [];
+  for (const a of apps) {
+    let running = false;
+    try {
+      const { stdout } = await exec('pgrep', ['-f', a.execPath], { timeout: 3000 });
+      running = stdout.trim().length > 0;
+    } catch {
+      running = false;
+    }
+    out.push({
+      name: a.name,
+      version: a.version,
+      kind: a.kind,
+      id: a.id,
+      running,
+      path: a.path,
+      configured: configuredApps.has(path.resolve(a.path)),
+    });
+  }
+  // 已接入的排前面，其余按名字
+  out.sort((x, y) => Number(y.configured) - Number(x.configured) || x.name.localeCompare(y.name));
+  return out;
+}
+
+/**
+ * 本地控制台服务：静态页 + JSON API + SSE 实时日志。
+ * 只监听 127.0.0.1，不对外网暴露。
+ */
+export async function startServer({ port = 7788, logger } = {}) {
+  const root = process.cwd();
+  const webDir = path.join(root, 'web');
+  const hub = new Set();
+  let running = null; // 正在跑的 child process
+  let clientsCache = { at: 0, data: null };
+
+  const logger2 = logger || createLogger('web', { silent: true });
+
+  const broadcast = (event) => {
+    const payload = `data: ${JSON.stringify(event)}\n\n`;
+    for (const res of hub) {
+      try {
+        res.write(payload);
+      } catch {
+        hub.delete(res);
+      }
+    }
+  };
+
+  const json = (res, code, obj) => {
+    const body = JSON.stringify(obj);
+    res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(body);
+  };
+
+  const readBody = (req) =>
+    new Promise((resolve) => {
+      let data = '';
+      req.on('data', (c) => {
+        data += c;
+        if (data.length > 1e6) req.destroy();
+      });
+      req.on('end', () => {
+        try {
+          resolve(data ? JSON.parse(data) : {});
+        } catch {
+          resolve({});
+        }
+      });
+    });
+
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url, `http://127.0.0.1:${port}`);
+    const p = url.pathname;
+
+    try {
+      // ---------- API ----------
+      if (p === '/api/state' && req.method === 'GET') {
+        return json(res, 200, buildState());
+      }
+
+      if (p === '/api/report' && req.method === 'GET') {
+        const date = url.searchParams.get('date') || today();
+        const file = path.resolve('data/reports', `${date}.md`);
+        if (!fs.existsSync(file)) return json(res, 404, { error: '没有这一天的报告' });
+        return json(res, 200, { date, markdown: fs.readFileSync(file, 'utf8') });
+      }
+
+      if (p === '/api/clients' && req.method === 'GET') {
+        if (!clientsCache.data || Date.now() - clientsCache.at > 60000) {
+          clientsCache = { at: Date.now(), data: await scanClientsCached(loadConfig()) };
+        }
+        return json(res, 200, { clients: clientsCache.data, scannedAt: new Date(clientsCache.at).toISOString() });
+      }
+
+      if (p === '/api/toggle' && req.method === 'POST') {
+        const body = await readBody(req);
+        const cfg = loadConfig();
+        if (!body.id || !cfg.platforms[body.id]) return json(res, 400, { error: '未知平台' });
+        cfg.platforms[body.id] = { ...cfg.platforms[body.id], enabled: !!body.enabled };
+        saveConfig(cfg);
+        logger2.info(`平台 ${body.id} ${body.enabled ? '已启用' : '已停用'}`);
+        broadcast({ type: 'state' });
+        return json(res, 200, { ok: true });
+      }
+
+      if (p === '/api/run' && req.method === 'POST') {
+        if (running) return json(res, 409, { error: '已有任务在运行，请等它结束' });
+        const body = await readBody(req);
+        const only = Array.isArray(body.only) && body.only.length ? body.only : [];
+        const dryRun = !!body.dryRun;
+
+        const args = ['src/index.js', 'run'];
+        if (only.length) args.push(`--only=${only.join(',')}`);
+        if (dryRun) args.push('--dry-run');
+
+        logger2.info(`开始运行: node ${args.join(' ')}`);
+        broadcast({ type: 'run-start', only, dryRun });
+
+        const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env } });
+        running = child;
+
+        const pipe = (stream, level) => {
+          let buf = '';
+          stream.on('data', (chunk) => {
+            buf += chunk.toString('utf8');
+            const lines = buf.split('\n');
+            buf = lines.pop() || '';
+            for (const line of lines) {
+              if (line.trim()) broadcast({ type: 'log', level, line: line.replace(/\s+$/, '') });
+            }
+          });
+        };
+        pipe(child.stdout, 'info');
+        pipe(child.stderr, 'error');
+
+        child.on('close', (code) => {
+          running = null;
+          broadcast({ type: 'run-end', code });
+          broadcast({ type: 'state' });
+          logger2.info(`运行结束，退出码 ${code}`);
+        });
+
+        return json(res, 202, { ok: true, started: args.join(' ') });
+      }
+
+      if (p === '/api/events' && req.method === 'GET') {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        });
+        res.write(': connected\n\n');
+        hub.add(res);
+        const ping = setInterval(() => {
+          try {
+            res.write(': ping\n\n');
+          } catch {
+            /* ignore */
+          }
+        }, 15000);
+        req.on('close', () => {
+          clearInterval(ping);
+          hub.delete(res);
+        });
+        return;
+      }
+
+      // ---------- 静态资源 ----------
+      let file = p === '/' ? path.join(webDir, 'index.html') : path.join(webDir, path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
+      if (!file.startsWith(webDir)) return json(res, 403, { error: 'forbidden' });
+
+      if (!fs.existsSync(file)) {
+        // 单页应用：未知路径回 index
+        file = path.join(webDir, 'index.html');
+        if (!fs.existsSync(file)) return json(res, 404, { error: '前端文件缺失' });
+      }
+      const ext = path.extname(file);
+      res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+      fs.createReadStream(file).pipe(res);
+    } catch (e) {
+      logger2.error(`请求出错 ${req.method} ${p}: ${e.message}`);
+      if (!res.headersSent) json(res, 500, { error: String(e.message || e) });
+      else res.end();
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', resolve);
+  });
+
+  const addr = server.address();
+  const url = `http://127.0.0.1:${addr.port}`;
+  return {
+    server,
+    url,
+    port: addr.port,
+    close: () =>
+      new Promise((resolve) => {
+        for (const r of hub) {
+          try {
+            r.end();
+          } catch {
+            /* ignore */
+          }
+        }
+        hub.clear();
+        server.close(() => resolve());
+      }),
+  };
+}
+
+/** CLI 入口 */
+export async function webCommand({ port = 7788 } = {}) {
+  const logger = createLogger('web', { silent: false });
+  const s = await startServer({ port, logger });
+  console.log('');
+  console.log('  ╭──────────────────────────────────────────────╮');
+  console.log(`  │  AI 签到台  →  ${s.url.padEnd(29)}│`);
+  console.log('  ╰──────────────────────────────────────────────╯');
+  console.log('  · 只监听 127.0.0.1，不对外网开放');
+  console.log('  · Ctrl+C 停止');
+  console.log('');
+  process.on('SIGINT', async () => {
+    console.log('\n正在关闭...');
+    await s.close();
+    process.exit(0);
+  });
+  return s;
+}

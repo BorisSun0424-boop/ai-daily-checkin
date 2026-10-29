@@ -1,0 +1,213 @@
+{
+  "headless": true,
+  "channel": null,
+  "userDataDir": "./profile",
+  "locale": "zh-CN",
+  "timezone": "Asia/Shanghai",
+  "actionTimeout": 15000,
+  "navTimeout": 45000,
+  "platformTimeout": 120000,
+  "screenshotKeepDays": 7,
+  "schedule": {
+    "time": "08:30",
+    "randomDelayMinutes": 25,
+    "retryTime": "12:30"
+  },
+  "notify": {
+    "macos": true,
+    "sound": true,
+    "webhookUrl": ""
+  },
+  "platforms": {
+    "doubao-client": {
+      "enabled": false,
+      "type": "client",
+      "name": "豆包",
+      "app": "/Applications/Doubao.app",
+      "port": 9445,
+      "cdpMode": "arg",
+      "pageUrlMatch": "doubao-chat",
+      "keywords": [
+        "签到",
+        "每日签到",
+        "领取",
+        "立即领取"
+      ],
+      "doneKeywords": [
+        "今日已签到",
+        "已签到",
+        "明天再来"
+      ],
+      "notes": "2026-10 实测：客户端可被 CDP 接管，但当前版本未发现稳定签到入口（活动弹窗为远程投放）"
+    },
+    "trae-cn": {
+      "enabled": false,
+      "type": "client",
+      "name": "Trae CN",
+      "app": "/Applications/Trae CN.app",
+      "port": 9222,
+      "cdpMode": "arg",
+      "clickSelectors": [
+        "[class*=\"accountCheckinButton\"]",
+        "[class*=\"accountCheckin\"]",
+        "[class*=\"checkin\"]"
+      ],
+      "keywords": [
+        "签到",
+        "领取",
+        "立即签到"
+      ],
+      "doneKeywords": [
+        "今日已签到",
+        "已签到",
+        "明天再来"
+      ],
+      "notes": "需先安装 Trae 国内版并登录（国际版 trae.ai 没有签到）。入口：左下角头像→签到。走 CDP 点真客户端，绕开设备绑定（网页 token 去签会返回 9074）"
+    },
+    "qoder-cn": {
+      "enabled": false,
+      "type": "client",
+      "name": "Qoder CN",
+      "app": "/Applications/Qoder.app",
+      "port": 9223,
+      "cdpMode": "arg",
+      "clickSelectors": [
+        "[class*=\"gift\"]",
+        "[class*=\"Gift\"]",
+        "[class*=\"check-in\"]",
+        "[class*=\"checkin\"]"
+      ],
+      "keywords": [
+        "领取",
+        "签到",
+        "立即领取"
+      ],
+      "doneKeywords": [
+        "已领取",
+        "明天再来",
+        "已签到"
+      ],
+      "notes": "需先安装 Qoder 国内版并登录。入口：左下角「用量面板→礼物图标」，每日 100 Credits（10:00→次日 10:00，错过不补）。旧 /daily-check-in 接口已 DISABLED，现走活动平台"
+    },
+    "doubaowork-client": {
+      "enabled": false,
+      "type": "client",
+      "name": "豆包工作",
+      "app": "/Applications/DoubaoWork.app",
+      "port": 9444,
+      "cdpMode": "arg",
+      "pageUrlMatch": "doubaowork-chat",
+      "keywords": [
+        "签到",
+        "每日签到",
+        "领取",
+        "立即领取"
+      ],
+      "doneKeywords": [
+        "今日已签到",
+        "已签到",
+        "明天再来"
+      ],
+      "notes": "2026-10 实测：客户端可被 CDP 接管，未发现签到入口；额度相关接口为 /alice/commerce/sale/subscription/quota/summary/"
+    },
+    "workbuddy": {
+      "enabled": true,
+      "entryUrls": [],
+      "keywords": [],
+      "doneKeywords": []
+    },
+    "zhipu": {
+      "enabled": true,
+      "entryUrls": [
+        "https://chatglm.cn/"
+      ],
+      "keywords": [
+        "签到",
+        "每日登录",
+        "领取"
+      ],
+      "doneKeywords": [
+        "今日登录积分已到账",
+        "今日已领取"
+      ]
+    },
+    "wanxiang": {
+      "enabled": false,
+      "entryUrls": [
+        "https://wanxiang.aliyun.com/"
+      ],
+      "keywords": [
+        "签到",
+        "立即签到",
+        "领取"
+      ],
+      "doneKeywords": [
+        "今日已签到",
+        "已签到",
+        "已领取"
+      ]
+    },
+    "kimi": {
+      "enabled": false,
+      "entryUrls": [
+        "https://www.kimi.com/"
+      ],
+      "keywords": [
+        "签到",
+        "每日签到",
+        "立即领取",
+        "领取"
+      ],
+      "doneKeywords": []
+    },
+    "wenxin": {
+      "enabled": false,
+      "entryUrls": [
+        "https://wenxin.baidu.com/"
+      ],
+      "keywords": [
+        "签到",
+        "每日签到",
+        "领取"
+      ],
+      "doneKeywords": []
+    },
+    "yuanbao": {
+      "enabled": false,
+      "entryUrls": [
+        "https://yuanbao.tencent.com/chat/"
+      ],
+      "keywords": [
+        "签到",
+        "每日签到",
+        "打卡",
+        "领取",
+        "领算力"
+      ],
+      "doneKeywords": [
+        "今日已签到",
+        "已签到",
+        "已领取"
+      ]
+    },
+    "doubao": {
+      "enabled": false,
+      "entryUrls": [
+        "https://www.doubao.com/chat/",
+        "https://www.doubao.com/work"
+      ],
+      "keywords": [
+        "签到",
+        "每日签到",
+        "立即领取",
+        "领取",
+        "打卡"
+      ],
+      "doneKeywords": [
+        "今日已签到",
+        "已签到",
+        "已领取"
+      ]
+    }
+  }
+}

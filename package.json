@@ -1,0 +1,24 @@
+{
+  "name": "ai-daily-checkin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "每天自动帮你在各家 AI 工具上完成每日签到/领积分（Playwright + 持久化登录态 + launchd 定时）",
+  "scripts": {
+    "login": "node src/index.js login",
+    "probe": "node src/index.js probe",
+    "checkin": "node src/index.js run --skip-if-done",
+    "dry-run": "node src/index.js run --dry-run",
+    "list": "node src/index.js list",
+    "report": "node src/index.js report",
+    "postinstall": "node -e \"console.log('\\n下一步: npx playwright install chromium\\n')\"",
+    "clients": "node src/index.js clients",
+    "web": "node src/index.js web"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
