@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { adapters, adapterById } from './adapters/index.js';
 import { runClientApp } from './adapters/clientApp.js';
+import platform from './platform.js';
 import { readJSON, writeJSON } from './util.js';
 
 export const CONFIG_FILE = path.resolve('config.json');
@@ -22,7 +23,8 @@ const CLIENT_PLATFORM_DEFAULTS = {
     enabled: false,
     type: 'client',
     name: '豆包',
-    app: '/Applications/Doubao.app',
+    app: platform.knownAppPaths.doubao[0],
+    appCandidates: platform.knownAppPaths.doubao,
     port: 9445,
     cdpMode: 'arg',
     pageUrlMatch: 'doubao-chat',
@@ -34,7 +36,8 @@ const CLIENT_PLATFORM_DEFAULTS = {
     enabled: false,
     type: 'client',
     name: 'Trae CN',
-    app: '/Applications/Trae CN.app',
+    app: platform.knownAppPaths.trae[0],
+    appCandidates: platform.knownAppPaths.trae,
     port: 9222,
     cdpMode: 'arg',
     clickSelectors: ['[class*="accountCheckinButton"]', '[class*="accountCheckin"]', '[class*="checkin"]'],
@@ -47,7 +50,8 @@ const CLIENT_PLATFORM_DEFAULTS = {
     enabled: false,
     type: 'client',
     name: 'Qoder CN',
-    app: '/Applications/Qoder.app',
+    app: platform.knownAppPaths.qoder[0],
+    appCandidates: platform.knownAppPaths.qoder,
     port: 9223,
     cdpMode: 'arg',
     clickSelectors: ['[class*="gift"]', '[class*="Gift"]', '[class*="check-in"]', '[class*="checkin"]'],
@@ -60,7 +64,8 @@ const CLIENT_PLATFORM_DEFAULTS = {
     enabled: true,
     type: 'client',
     name: '豆包工作',
-    app: '/Applications/DoubaoWork.app',
+    app: platform.knownAppPaths.doubaowork[0],
+    appCandidates: platform.knownAppPaths.doubaowork,
     port: 9444,
     cdpMode: 'arg',
     // 「免费用豆包」侧边面板就是任务中心，首项是每日签到（+200 额度）

@@ -26,7 +26,11 @@
 ## 请按以下步骤执行
 
 ### 步骤 1：环境检查
-- 执行 uname -s、uname -m、sw_vers，确认是 macOS 及芯片架构
+- 先判断操作系统：
+  · macOS：执行 uname -s、uname -m、sw_vers
+  · Windows：执行 `systeminfo | findstr /C:"OS Version"` 与 `$env:PROCESSOR_ARCHITECTURE`
+- 后续命令按系统选择：macOS 用 `bash scripts/*.sh`，Windows 用
+  `powershell -ExecutionPolicy Bypass -File scripts\*.ps1`
 - 执行 node -v，判断是否 ≥18
 - 检查磁盘剩余空间（需要约 1.5GB）
 

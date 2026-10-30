@@ -8,6 +8,7 @@ import { createLogger } from './logger.js';
 import { today } from './util.js';
 import { readResultsJSONL } from './notify.js';
 import { scanApps } from './clients.js';
+import platform from './platform.js';
 import { getSchedule, applySchedule, readEffectiveSchedule } from './schedule.js';
 
 const exec = promisify(execFile);
@@ -107,7 +108,7 @@ export function buildState() {
 async function scanClientsCached(cfg) {
   const apps = await scanApps();
   // 内置适配器（如 WorkBuddy）的客户端路径不在 config 里，单独带上
-  const KNOWN_CHECKIN_APPS = ['/Applications/WorkBuddy.app'];
+  const KNOWN_CHECKIN_APPS = platform.knownAppPaths.workbuddy || [];
   const configuredApps = new Set([
     ...KNOWN_CHECKIN_APPS.map((x) => path.resolve(x)),
     ...Object.values(cfg?.platforms || {})
@@ -117,13 +118,7 @@ async function scanClientsCached(cfg) {
   ]);
   const out = [];
   for (const a of apps) {
-    let running = false;
-    try {
-      const { stdout } = await exec('pgrep', ['-f', a.execPath], { timeout: 3000 });
-      running = stdout.trim().length > 0;
-    } catch {
-      running = false;
-    }
+    const running = await platform.isProcessRunning(a.execPath);
     out.push({
       name: a.name,
       version: a.version,

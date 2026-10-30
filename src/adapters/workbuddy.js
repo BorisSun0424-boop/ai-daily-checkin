@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import platform from '../platform.js';
 import { defineAdapter } from './base.js';
 import { sleep } from '../util.js';
 
@@ -23,10 +23,15 @@ import { sleep } from '../util.js';
  *   （在 Electron 系终端/IDE 里跑脚本很容易中招）
  */
 
-const APP_BIN = '/Applications/WorkBuddy.app/Contents/MacOS/Electron';
 const DEFAULT_PORT = 9333;
 
-const exec = promisify(execFile);
+/** 解析客户端可执行文件（macOS: .app 内部；Windows: exe 路径候选） */
+function workbuddyBin(cfg) {
+  const explicit = cfg?.platforms?.workbuddy?.app;
+  const candidates = explicit ? [explicit] : platform.knownAppPaths.workbuddy;
+  const picked = platform.pickAppPath(candidates);
+  return picked ? platform.resolveExecutable(picked) : null;
+}
 
 async function cdpVersion(port) {
   try {
@@ -37,18 +42,14 @@ async function cdpVersion(port) {
   }
 }
 
-async function isAppRunning() {
-  try {
-    const { stdout } = await exec('pgrep', ['-f', APP_BIN]);
-    return stdout.trim().length > 0;
-  } catch {
-    return false;
-  }
+async function isAppRunning(execPath) {
+  return platform.isProcessRunning(execPath);
 }
 
 /** 带调试端口启动客户端（剥掉会致命的环境变量） */
-async function launchWithDebug(port, logger) {
-  if (!fs.existsSync(APP_BIN)) throw new Error(`找不到 WorkBuddy 客户端: ${APP_BIN}`);
+async function launchWithDebug(port, logger, execPath) {
+  if (!execPath) throw new Error('找不到 WorkBuddy 客户端，请在 config.json 的 platforms.workbuddy.app 里填写安装路径');
+  if (platform.isMacOS && !fs.existsSync(execPath)) throw new Error(`找不到 WorkBuddy 客户端: ${execPath}`);
 
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE; // ← 不删这个，客户端起不来
@@ -56,7 +57,7 @@ async function launchWithDebug(port, logger) {
   env.WORKBUDDY_REMOTE_DEBUGGING_PORT = String(port);
 
   logger.info(`启动 WorkBuddy 客户端（CDP 端口 ${port}）`);
-  const child = spawn(APP_BIN, [], { detached: true, stdio: 'ignore', env });
+  const child = spawn(execPath, [], { detached: true, stdio: 'ignore', env });
   child.unref();
   return child.pid;
 }
@@ -75,11 +76,16 @@ async function waitForCdp(port, logger, timeoutMs = 90000) {
 }
 
 /** 优雅退出客户端（只在我们自己拉起来的时候做） */
-async function quitApp(pid, logger) {
+async function quitApp(pid, logger, execPath) {
   try {
-    if (pid) process.kill(pid, 'SIGTERM');
-    await sleep(1200);
-    if (await isAppRunning()) await exec('osascript', ['-e', 'quit app "WorkBuddy"']).catch(() => null);
+    if (execPath) await platform.gracefulQuit({ appName: 'WorkBuddy', execPath, logger });
+    else if (pid) {
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch {
+        /* ignore */
+      }
+    }
     logger.step('已关闭 WorkBuddy 客户端');
   } catch (e) {
     logger.warn(`关闭客户端失败（忽略）: ${String(e.message).split('\n')[0]}`);
@@ -104,6 +110,7 @@ export default defineAdapter({
 
   custom: async ({ logger, cfg, dryRun = false }) => {
     const pc = cfg.platforms?.workbuddy || {};
+    const execPath = workbuddyBin(cfg);
     const port = Number(pc.cdpPort || DEFAULT_PORT);
     const quitAfter = pc.quitAfterLaunch !== false;
     const meta = {};
@@ -114,19 +121,19 @@ export default defineAdapter({
     let version = await cdpVersion(port);
 
     if (!version) {
-      if (await isAppRunning()) {
+      if (execPath && (await isAppRunning(execPath))) {
         // 客户端在跑但没开调试端口：不能强杀用户正在用的窗口
         return {
           status: 'needs_manual',
           detail:
             `WorkBuddy 正在运行但没有开启调试端口（${port}）。` +
             '请先完全退出 WorkBuddy（菜单栏 → 退出）后重跑，或手动执行：' +
-            `env -u ELECTRON_RUN_AS_NODE WORKBUDDY_REMOTE_DEBUGGING_PORT=${port} "${APP_BIN}"`,
+            `env -u ELECTRON_RUN_AS_NODE WORKBUDDY_REMOTE_DEBUGGING_PORT=${port} "${execPath || '<WorkBuddy 可执行文件>'}"`,
         };
       }
-      launchedPid = await launchWithDebug(port, logger);
+      launchedPid = await launchWithDebug(port, logger, execPath);
       if (!(await waitForCdp(port, logger))) {
-        await quitApp(launchedPid, logger);
+        await quitApp(launchedPid, logger, execPath);
         return { status: 'error', detail: '客户端已启动但 CDP 端口没起来（90s 超时）' };
       }
       version = await cdpVersion(port);
@@ -139,7 +146,7 @@ export default defineAdapter({
     try {
       browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 20000 });
     } catch (e) {
-      if (launchedPid) await quitApp(launchedPid, logger);
+      if (launchedPid) await quitApp(launchedPid, logger, execPath);
       return { status: 'error', detail: `连接 CDP 失败: ${String(e.message).split('\n')[0]}` };
     }
 
@@ -227,7 +234,7 @@ export default defineAdapter({
       } catch {
         /* ignore */
       }
-      if (launchedPid && quitAfter) await quitApp(launchedPid, logger);
+      if (launchedPid && quitAfter) await quitApp(launchedPid, logger, execPath);
     }
   },
 });

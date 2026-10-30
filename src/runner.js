@@ -7,7 +7,7 @@ import {
   writeReport,
   readResultsJSONL,
   appendResultJSONL,
-  macosNotify,
+  systemNotify,
   webhookNotify,
   oneLineSummary,
   detailLines,
@@ -179,7 +179,7 @@ export async function runAll(ctx, cfg, opts = {}) {
     }));
     for (const r of skipped) appendResultJSONL(RESULT_FILE, r);
     writeReport(REPORT_DIR, today(), skipped, { time: nowISO() });
-    if (cfg.notify?.macos) await macosNotify('AI 签到跳过：网络不可用', '今天没跑，联网后可手动补：npm run checkin', { sound: false });
+    if (cfg.notify?.macos) await systemNotify('AI 签到跳过：网络不可用', '今天没跑，联网后可手动补：npm run checkin', { sound: false });
     return skipped;
   }
 
@@ -206,7 +206,7 @@ export async function runAll(ctx, cfg, opts = {}) {
     const ok = results.filter((r) => r.status === 'success' || r.status === 'already').length;
     const title = `AI 签到 ${ok}/${results.length} 成功`;
     const body = [oneLineSummary(results), detailLines(results)].filter(Boolean).join('\n');
-    await macosNotify(title, body || '全部完成', { sound: cfg.notify.sound !== false });
+    await systemNotify(title, body || '全部完成', { sound: cfg.notify.sound !== false });
   }
 
   if (cfg.notify?.webhookUrl) {

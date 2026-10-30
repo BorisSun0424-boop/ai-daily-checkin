@@ -9,7 +9,7 @@ import { runAll, RESULT_FILE, REPORT_DIR, alreadyDoneToday } from './runner.js';
 import { loginCommand } from './login.js';
 import { probeCommand } from './probe.js';
 import { clientsCommand } from './clients.js';
-import { getSchedule, applySchedule, readEffectiveSchedule } from './schedule.js';
+import { getSchedule, applySchedule, readEffectiveSchedule, installSchedule, removeSchedule } from './schedule.js';
 import { webCommand } from './server.js';
 import { statusIcon, readResultsJSONL } from './notify.js';
 import { today } from './util.js';
@@ -31,6 +31,8 @@ const HELP = `
   npm run clients -- --probe=豆包    实测某个客户端能否被接管
   npm run enable -- trae-cn          启用某个平台（disable 则停用）
   npm run schedule -- 08:30          修改每日运行时间（也可在网页控制台改）
+  npm run service:install            安装定时任务（macOS=launchd / Windows=计划任务）
+  npm run service:uninstall          移除定时任务
   npm run web                        打开本地可视化控制台（默认 http://127.0.0.1:7788）
 
 可选参数（npm 传参需加 -- ，例如 npm run checkin -- --only=doubao）:
@@ -150,6 +152,27 @@ async function main() {
       console.log(`\n  控制台: npm run web  → 也可以直接在网页上改\n`);
     } catch (e) {
       console.error(`\n✗ 设置失败：${e.message}\n`);
+      process.exitCode = 2;
+    }
+    return;
+  }
+
+  if (cmd === 'install-service' || cmd === 'uninstall-service') {
+    try {
+      if (cmd === 'install-service') {
+        const res = await installSchedule({ logger });
+        const eff = await readEffectiveSchedule();
+        console.log(`\n✓ 已安装定时任务（${res.method}）`);
+        console.log(`  主跑: ${res.time}（+0~${res.randomDelayMinutes} 分钟随机）`);
+        console.log(`  补跑: ${res.retryTime || '已关闭'}`);
+        console.log(`  实际生效: ${eff.join(' / ') || '(读取失败)'}`);
+        console.log(`\n  提示: 控制台请用 npm run web 启动（Windows 可做成开机启动快捷方式）\n`);
+      } else {
+        await removeSchedule({ logger });
+        console.log('\n✓ 已移除定时任务（数据与登录态保留）\n');
+      }
+    } catch (e) {
+      console.error(`\n✗ ${cmd} 失败：${e.message}\n`);
       process.exitCode = 2;
     }
     return;

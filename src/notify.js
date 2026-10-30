@@ -1,9 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const exec = promisify(execFile);
+import platform from './platform.js';
 
 const ICON = {
   success: '✅',
@@ -25,16 +22,13 @@ export const statusIcon = (s) => ICON[s] || '•';
 
 const esc = (s) => String(s).replace(/["\\\n\r]/g, (c) => ({ '"': '\\"', '\\': '\\\\', '\n': ' ', '\r': ' ' })[c]);
 
-/** macOS 通知中心通知（launchd 后台跑时也能弹） */
-export async function macosNotify(title, message, { sound = true } = {}) {
-  const script = `display notification "${esc(message)}" with title "${esc(title)}"${sound ? ' sound name "Glass"' : ''}`;
-  try {
-    await exec('osascript', ['-e', script], { timeout: 8000 });
-    return true;
-  } catch {
-    return false;
-  }
+/** 系统通知：macOS 通知中心 / Windows 气泡通知（后台定时跑时也能弹） */
+export async function systemNotify(title, message, { sound = true } = {}) {
+  return platform.notify(title, message, { sound });
 }
+
+/** 兼容旧名字 */
+export const macosNotify = systemNotify;
 
 /** 可选的 webhook（飞书/钉钉/企业微信/Slack 之类），失败静默 */
 export async function webhookNotify(url, payload) {

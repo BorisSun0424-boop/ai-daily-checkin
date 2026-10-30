@@ -1,36 +1,25 @@
 #!/usr/bin/env bash
-# 卸载定时任务（不动你的登录态和日志）
+# 移除所有定时任务与常驻服务（不动数据、登录态）
 set -euo pipefail
 
-LABEL="com.local.ai-daily-checkin"
-PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UID_NUM="$(id -u)"
+cd "$PROJECT_DIR" 2>/dev/null || true
 
-if [ -f "$PLIST" ]; then
-  launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
-  rm -f "$PLIST"
-  echo "✓ 已卸载定时任务 $LABEL 并删除 plist"
-else
-  echo "· 没有找到已安装的 plist，无需卸载"
+echo "→ 移除每日定时任务"
+node src/index.js uninstall-service 2>/dev/null || true
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  for LABEL in com.local.ai-checkin-workbuddy-env com.local.ai-checkin-web; do
+    PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+    if [ -f "$PLIST" ]; then
+      launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
+      rm -f "$PLIST"
+      echo "  ✓ 已移除 $LABEL"
+    fi
+  done
+  launchctl unsetenv WORKBUDDY_REMOTE_DEBUGGING_PORT 2>/dev/null || true
 fi
 
-# 顺手撤掉 WorkBuddy 的调试端口环境变量和它的 LaunchAgent
-ENV_LABEL="com.local.ai-checkin-workbuddy-env"
-ENV_PLIST="$HOME/Library/LaunchAgents/$ENV_LABEL.plist"
-if [ -f "$ENV_PLIST" ]; then
-  launchctl bootout "gui/$UID_NUM/$ENV_LABEL" 2>/dev/null || true
-  rm -f "$ENV_PLIST"
-fi
-launchctl unsetenv WORKBUDDY_REMOTE_DEBUGGING_PORT 2>/dev/null || true
-echo "· 已撤销 WorkBuddy 调试端口设置"
-
-# 停掉常驻控制台
-WEB_LABEL="com.local.ai-checkin-web"
-WEB_PLIST="$HOME/Library/LaunchAgents/$WEB_LABEL.plist"
-if [ -f "$WEB_PLIST" ]; then
-  launchctl bootout "gui/$UID_NUM/$WEB_LABEL" 2>/dev/null || true
-  rm -f "$WEB_PLIST"
-  echo "· 已停止可视化控制台"
-fi
-
-echo "· 登录态 profile、日志和报告都保留在项目目录里，需要清空可手动删除 profile/ 和 data/"
+echo ""
+echo "· 登录态（profile/）、日志、报告都保留；需要清空可手动删除 profile/ 与 data/"

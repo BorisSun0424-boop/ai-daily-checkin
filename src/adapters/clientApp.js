@@ -1,12 +1,9 @@
 import fs from 'node:fs';
-import path from 'node:path';
-import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import platform from '../platform.js';
 import { sleep } from '../util.js';
 import { findClickables, clickByKeywords, pageText, classifyOutcome, detectLogin, screenshot } from '../dom.js';
-
-const exec = promisify(execFile);
 
 /**
  * 通用"接管桌面客户端"适配器。
@@ -47,69 +44,30 @@ async function cdpVersion(port) {
 }
 
 async function asynIsRunning(execPath) {
-  try {
-    const { stdout } = await exec('pgrep', ['-f', execPath]);
-    return stdout.trim().length > 0;
-  } catch {
-    return false;
-  }
+  return platform.isProcessRunning(execPath);
 }
 
 export function resolveExecutable(pc) {
-  const appOrBin = pc.app || pc.bin;
-  if (!appOrBin) throw new Error('客户端平台缺少 app/bin 配置');
-  if (appOrBin.endsWith('.app')) {
-    const macos = path.join(appOrBin, 'Contents', 'MacOS');
-    const exe = fs.readdirSync(macos).find((f) => !f.startsWith('.'));
-    if (!exe) throw new Error(`${appOrBin} 里找不到可执行文件`);
-    return path.join(macos, exe);
-  }
-  return appOrBin;
+  const explicit = pc.app || pc.bin;
+  const fromCandidates = platform.pickAppPath(pc.appCandidates || []);
+  // 优先用实际存在的路径；配置里写死的路径不存在时退回候选列表
+  const candidate =
+    (explicit && fs.existsSync(explicit) ? explicit : null) ||
+    (pc.bin && fs.existsSync(pc.bin) ? pc.bin : null) ||
+    fromCandidates ||
+    explicit;
+  if (!candidate) throw new Error('客户端平台缺少 app/bin 配置');
+  return platform.resolveExecutable(candidate);
 }
 
 async function gracefulQuitApp(pc, execPath, logger) {
   const appName = pc.quitAppName || String(pc.name || '').replace(/\s+/g, '');
-  const bundleDir = execPath.includes('.app/Contents/')
-    ? execPath.slice(0, execPath.indexOf('.app/Contents/') + 4)
-    : '';
-
-  const gone = async () => !(await asynIsRunning(execPath));
-
-  // 1) 优雅退出（macOS 原生方式）
-  if (appName) await exec('osascript', ['-e', `quit app "${appName}"`]).catch(() => null);
-  for (let i = 0; i < 16; i++) {
-    if (await gone()) return true;
-    await sleep(500);
-  }
-
-  // 2) SIGTERM：有些客户端会弹"确认退出"对话框，等不到就升级
-  logger?.warn('优雅退出未完成，发送 SIGTERM');
-  await exec('pkill', ['-f', execPath]).catch(() => null);
-  for (let i = 0; i < 12; i++) {
-    if (await gone()) return true;
-    await sleep(500);
-  }
-
-  // 3) SIGKILL：强杀（聊天记录在服务端，本地只丢草稿，属可接受的兜底）
-  logger?.warn('SIGTERM 无效，强制结束进程（会丢失未发送草稿）');
-  if (bundleDir) await exec('pkill', ['-9', '-f', `${bundleDir}/Contents`]).catch(() => null);
-  else await exec('pkill', ['-9', '-f', execPath]).catch(() => null);
-  for (let i = 0; i < 10; i++) {
-    if (await gone()) return true;
-    await sleep(500);
-  }
-  logger?.warn('客户端仍未退出，后续可能因单实例锁失败');
-  return false;
+  return platform.gracefulQuit({ appName, execPath, logger });
 }
 
 async function quitApp(pid, execPath, logger) {
   try {
-    if (pid) process.kill(pid, 'SIGTERM');
-    await sleep(1500);
-    if (execPath && (await asynIsRunning(execPath))) {
-      const name = path.basename(execPath).replace(/\s+/g, ' ');
-      await exec('osascript', ['-e', `quit app "${name}"`]).catch(() => null);
-    }
+    await platform.gracefulQuit({ execPath, logger });
     logger?.step('已关闭客户端');
   } catch (e) {
     logger?.warn(`关闭客户端失败（忽略）: ${String(e.message).split('\n')[0]}`);
@@ -119,7 +77,7 @@ async function quitApp(pid, execPath, logger) {
 export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun = false } = {}) {
   const port = Number(pc.port || 9445);
   const appOrBin = pc.app || pc.bin;
-  if (appOrBin && !fs.existsSync(appOrBin)) {
+  if (appOrBin && platform.isMacOS && !fs.existsSync(appOrBin)) {
     return {
       status: 'not_installed',
       detail: `没有找到客户端 ${appOrBin}。装上并登录后，把 config.json 里的 app/app路径 改对再启用`,

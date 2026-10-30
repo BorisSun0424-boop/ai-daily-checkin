@@ -27,7 +27,7 @@
 
 | 项 | 要求 |
 | --- | --- |
-| 系统 | macOS 12+（Apple Silicon 最佳） |
+| 系统 | macOS 12+（完整验证）或 Windows 10+（网页类可用，客户端类待验证） |
 | 运行时 | Node.js ≥ 18（没有的话下面的脚本会告诉你三种装法） |
 | 磁盘 | 约 1.5GB（依赖 + 570MB 浏览器内核） |
 | 网络 | 能访问 GitHub 下载代码即可；**装完运行不需要外网**，只访问国内平台站点 |
@@ -54,6 +54,10 @@ bash scripts/bootstrap.sh
 不想碰命令行：把仓库里的 [`docs/AGENT-PROMPT.md`](AGENT-PROMPT.md) 整段复制给你的 AI Agent，让它帮你装。
 
 ---
+
+> **Windows 用户**：命令里的 `bash scripts/xxx.sh` 换成
+> `powershell -ExecutionPolicy Bypass -File scripts\xxx.ps1`；
+> 第 5 步的定时任务同样用 `scripts\install-service.ps1` 安装。
 
 ## 3. 装客户端并登录（必须你本人扫码）
 

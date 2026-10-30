@@ -31,6 +31,10 @@
 
 ## 2. 安装（三种方式，任选一种）
 
+> **Windows 用户**：把下面命令里的 `bash xxx.sh` 换成
+> `powershell -ExecutionPolicy Bypass -File scripts\xxx.ps1`，
+> 定时任务由「任务计划程序」承载（`install-service.ps1`）。
+
 ### 方式 A：交给 AI Agent **[推荐给非开发者]**
 
 把 [`docs/AGENT-PROMPT.md`](./AGENT-PROMPT.md) 里那段指令整段复制给你常用的 AI Agent（Claude Code / Cursor / DeepSeek Harness / WorkBuddy 等），它会：
@@ -214,6 +218,29 @@ data/log/                  日志
 ```
 
 ---
+
+## 6.5 Windows 说明
+
+| 项目 | macOS | Windows |
+| --- | --- | --- |
+| 一键安装 | `bash scripts/bootstrap.sh` | `powershell -File scripts\bootstrap.ps1` |
+| 装定时任务 | `bash scripts/install-launchd.sh` | `powershell -File scripts\install-service.ps1` |
+| 定时载体 | launchd（LaunchAgent） | 任务计划程序（schtasks，任务名 `ZaobaDailyCheckin`） |
+| 卸载任务 | `bash scripts/uninstall-launchd.sh` | `powershell -File scripts\uninstall-service.ps1` |
+| 通知 | 通知中心 | Windows 气泡通知 |
+| 客户端接管 | 已实测 | 代码已实现，**尚未真机验证**；网页类平台可直接用 |
+
+Windows 下客户端默认路径候选：
+
+```
+WorkBuddy   : %LOCALAPPDATA%\Programs\WorkBuddy\WorkBuddy.exe
+              C:\Program Files\WorkBuddy\WorkBuddy.exe
+豆包工作     : %LOCALAPPDATA%\Programs\DoubaoWork\DoubaoWork.exe
+              C:\Program Files\DoubaoWork\DoubaoWork.exe
+```
+
+路径不对时，改 `config.json` 里对应平台的 `app`（或在 `platforms.<id>.appCandidates` 里加你的路径）。
+如果创建计划任务提示权限不足，用「以管理员身份运行」的 PowerShell 重试一次。
 
 ## 7. 升级 / 卸载
 
