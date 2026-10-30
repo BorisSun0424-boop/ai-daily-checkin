@@ -9,6 +9,7 @@ import { runAll, RESULT_FILE, REPORT_DIR, alreadyDoneToday } from './runner.js';
 import { loginCommand } from './login.js';
 import { probeCommand } from './probe.js';
 import { clientsCommand } from './clients.js';
+import { getSchedule, applySchedule, readEffectiveSchedule } from './schedule.js';
 import { webCommand } from './server.js';
 import { statusIcon, readResultsJSONL } from './notify.js';
 import { today } from './util.js';
@@ -29,6 +30,7 @@ const HELP = `
   npm run clients                    扫描本机可接管的客户端（Electron/Chromium 壳）
   npm run clients -- --probe=豆包    实测某个客户端能否被接管
   npm run enable -- trae-cn          启用某个平台（disable 则停用）
+  npm run schedule -- 08:30          修改每日运行时间（也可在网页控制台改）
   npm run web                        打开本地可视化控制台（默认 http://127.0.0.1:7788）
 
 可选参数（npm 传参需加 -- ，例如 npm run checkin -- --only=doubao）:
@@ -103,6 +105,54 @@ async function main() {
 
   if (cmd === 'probe') {
     return probeCommand(cfg, logger, { only: args.only });
+  }
+
+  if (cmd === 'schedule') {
+    const raw = process.argv.slice(3);
+    const getFlag = (name) => {
+      const hit = raw.find((a) => a.startsWith(`--${name}=`));
+      return hit ? hit.slice(name.length + 3) : undefined;
+    };
+    const timeArg = raw.find((a) => !a.startsWith('--'));
+    const wantsChange = Boolean(timeArg || getFlag('time') || getFlag('retry') || getFlag('delay') !== undefined || process.argv.includes('--no-retry'));
+
+    if (!wantsChange) {
+      const cur = getSchedule();
+      const eff = await readEffectiveSchedule();
+      console.log('\n当前定时设置\n');
+      console.log(`  主跑时间:   ${cur.time}（随机延迟 0~${cur.randomDelayMinutes} 分钟）`);
+      console.log(`  补跑时间:   ${cur.retryTime || '已关闭'}`);
+      console.log(`  launchd 实际生效: ${eff.join(' / ') || '(未安装)'}`);
+      console.log('\n修改示例：');
+      console.log('  node src/index.js schedule 08:30                # 改成 8:30');
+      console.log('  node src/index.js schedule 07:45 --delay=10     # 7:45，随机延迟 10 分钟');
+      console.log('  node src/index.js schedule 08:00 --no-retry     # 关掉中午补跑');
+      console.log('  npm run schedule -- 07:45                       # 用 npm 也行\n');
+      return;
+    }
+
+    const patch = {};
+    const t = timeArg || getFlag('time');
+    if (t) patch.time = t;
+    const r = getFlag('retry');
+    if (r) patch.retryTime = r;
+    if (process.argv.includes('--no-retry')) patch.retryTime = '';
+    const d = getFlag('delay');
+    if (d !== undefined) patch.randomDelayMinutes = d;
+
+    try {
+      const sched = await applySchedule(patch);
+      const eff = await readEffectiveSchedule();
+      console.log(`\n✓ 已更新并重新加载 launchd`);
+      console.log(`  主跑: ${sched.time}（+0~${sched.randomDelayMinutes} 分钟随机）`);
+      console.log(`  补跑: ${sched.retryTime || '已关闭'}`);
+      console.log(`  实际生效: ${eff.join(' / ')}`);
+      console.log(`\n  控制台: npm run web  → 也可以直接在网页上改\n`);
+    } catch (e) {
+      console.error(`\n✗ 设置失败：${e.message}\n`);
+      process.exitCode = 2;
+    }
+    return;
   }
 
   if (cmd === 'enable' || cmd === 'disable') {

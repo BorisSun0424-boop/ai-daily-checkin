@@ -133,6 +133,21 @@ npm run dry-run                       # 全部平台只检查
 
 ---
 
+## 4.5 修改运行时间
+
+装好之后随时可以改，三种方式任选：
+
+```bash
+npm run schedule                       # 看当前设置
+npm run schedule -- 07:45              # 改成 7:45（会立即重写 launchd 并生效）
+npm run schedule -- 07:45 --delay=10   # 7:45 起，随机延迟 0~10 分钟
+npm run schedule -- 08:00 --no-retry   # 关掉中午补跑
+```
+
+或者在网页控制台右上角点 `⏰ 8:00` 直接改，保存即生效。
+
+> 手动改 `config.json` 之后，需要执行 `bash scripts/install-launchd.sh` 让 launchd 重新读取。
+
 ## 5. 系统权限与电源设置
 
 ### 5.1 通知权限

@@ -8,6 +8,7 @@ import { createLogger } from './logger.js';
 import { today } from './util.js';
 import { readResultsJSONL } from './notify.js';
 import { scanApps } from './clients.js';
+import { getSchedule, applySchedule, readEffectiveSchedule } from './schedule.js';
 
 const exec = promisify(execFile);
 
@@ -199,6 +200,27 @@ export async function startServer({ port = 7788, logger } = {}) {
         const file = path.resolve('data/reports', `${date}.md`);
         if (!fs.existsSync(file)) return json(res, 404, { error: '没有这一天的报告' });
         return json(res, 200, { date, markdown: fs.readFileSync(file, 'utf8') });
+      }
+
+      if (p === '/api/schedule' && req.method === 'GET') {
+        return json(res, 200, { config: getSchedule(), effective: await readEffectiveSchedule() });
+      }
+
+      if (p === '/api/schedule' && req.method === 'POST') {
+        const body = await readBody(req);
+        try {
+          const sched = await applySchedule({
+            time: body.time,
+            retryTime: body.retryTime,
+            randomDelayMinutes: body.randomDelayMinutes,
+          });
+          const effective = await readEffectiveSchedule();
+          logger2.info(`定时已更新: 主跑 ${sched.time}, 补跑 ${sched.retryTime || '关闭'}, 延迟 ${sched.randomDelayMinutes} 分钟`);
+          broadcast({ type: 'state' });
+          return json(res, 200, { ok: true, config: sched, effective });
+        } catch (e) {
+          return json(res, 400, { error: e.message });
+        }
       }
 
       if (p === '/api/clients' && req.method === 'GET') {

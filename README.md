@@ -68,6 +68,33 @@ npm run web                          # ⑦ 打开控制台 → http://127.0.0.1:
 
 ---
 
+## 修改运行时间
+
+三种方式，改完都是**立即生效**（会重写 launchd 并重新加载，不用手动重装）：
+
+| 方式 | 怎么做 |
+| --- | --- |
+| **网页控制台** | 右上角点 `⏰ 8:00` → 填时间 → 保存并生效 |
+| **命令行** | `npm run schedule -- 07:45` |
+| **配置文件** | 改 `config.json` 的 `schedule`，然后跑 `bash scripts/install-launchd.sh` |
+
+![设置运行时间](docs/screenshot-schedule.png)
+
+命令行更多用法：
+
+```bash
+npm run schedule                              # 查看当前设置（含 launchd 实际生效值）
+npm run schedule -- 08:30                     # 改成每天 8:30
+npm run schedule -- 07:45 --delay=10          # 7:45 跑，随机延迟 0~10 分钟
+npm run schedule -- 08:00 --no-retry          # 关掉中午补跑
+npm run schedule -- 09:00 --retry=14:00       # 主跑 9:00，补跑 14:00
+```
+
+两个参数的含义：
+
+- **随机延迟**：避免每天同一秒请求平台（风控）。设 0 = 准点跑；设 5 = 在设定时间后 0~5 分钟内随机执行
+- **补跑时间**：主跑错过（睡眠/断网）时的第二次机会，已签过会自动跳过
+
 ## 可视化控制台
 
 命令行能跑，但状态不直观。所以带了一个本地 Web 控制台：

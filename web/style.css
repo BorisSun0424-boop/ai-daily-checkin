@@ -458,3 +458,23 @@ main {
   color: var(--ink-3);
   font-size: 13px;
 }
+
+/* ---------------- schedule form ---------------- */
+.sheet-sm { width: min(460px, 100%); }
+.sched-body { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.field input {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink);
+}
+.field input:focus { outline: none; border-color: #b9c6ff; box-shadow: 0 0 0 3px rgba(61, 90, 254, 0.12); }
+.hint { margin: 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.6; }
+.sched-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+@media (max-width: 620px) {
+  #btnSchedule { display: none; }
+}

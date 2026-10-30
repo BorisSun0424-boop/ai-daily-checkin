@@ -20,6 +20,7 @@
       </div>
       <div class="actions">
         <div class="next-run" id="nextRun"></div>
+        <button id="btnSchedule" class="btn ghost" title="设置每天自动运行的时间">⏰ <span id="schedLabel">--:--</span></button>
         <button id="btnReport" class="btn ghost" title="查看今日日报">日报</button>
         <button id="btnDry" class="btn ghost" title="只检查不点击">演练</button>
         <button id="btnRunAll" class="btn primary">
@@ -71,6 +72,34 @@
       <span>数据来自 <code>data/results.jsonl</code> · 只监听 127.0.0.1</span>
       <span id="builtAt"></span>
     </footer>
+
+    <div class="modal" id="scheduleModal">
+      <div class="sheet sheet-sm">
+        <div class="sheet-head">
+          <h2>设置每天运行时间</h2>
+          <button class="btn tiny" id="btnCloseSchedule">关闭</button>
+        </div>
+        <div class="sched-body">
+          <label class="field">
+            <span>主跑时间</span>
+            <input type="time" id="inpTime" step="60" />
+          </label>
+          <label class="field">
+            <span>补跑时间（留空 = 关闭）</span>
+            <input type="time" id="inpRetry" step="60" />
+          </label>
+          <label class="field">
+            <span>随机延迟上限（分钟）</span>
+            <input type="number" id="inpDelay" min="0" max="120" step="1" />
+          </label>
+          <p class="hint">随机延迟是为了避免每天同一秒请求平台（风控）。设 0 表示准点跑。</p>
+          <div class="sched-actions">
+            <button class="btn primary" id="btnSaveSchedule">保存并生效</button>
+            <span class="muted" id="schedEffective"></span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="modal" id="modal">
       <div class="sheet">

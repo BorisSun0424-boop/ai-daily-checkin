@@ -370,6 +370,57 @@ function renderMarkdown(md) {
   return html;
 }
 
+/* ---------------- 定时设置 ---------------- */
+
+let sched = { time: '08:00', retryTime: '12:30', randomDelayMinutes: 5 };
+
+async function loadSchedule() {
+  try {
+    const r = await fetch('/api/schedule');
+    const data = await r.json();
+    sched = data.config || sched;
+    $('#schedLabel').textContent = sched.time;
+    $('#schedEffective').textContent = data.effective?.length ? `launchd 实际生效：${data.effective.join(' / ')}` : 'launchd 未安装';
+  } catch {
+    /* 忽略，保持默认显示 */
+  }
+}
+
+function openSchedule() {
+  $('#inpTime').value = sched.time;
+  $('#inpRetry').value = sched.retryTime || '';
+  $('#inpDelay').value = sched.randomDelayMinutes ?? 5;
+  $('#scheduleModal').classList.add('show');
+}
+
+async function saveSchedule() {
+  const btn = $('#btnSaveSchedule');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        time: $('#inpTime').value,
+        retryTime: $('#inpRetry').value,          // 空字符串 = 关闭补跑
+        randomDelayMinutes: Number($('#inpDelay').value || 0),
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '保存失败');
+    sched = data.config;
+    $('#schedLabel').textContent = sched.time;
+    $('#schedEffective').textContent = `launchd 实际生效：${(data.effective || []).join(' / ')}`;
+    toast(`已改为每天 ${sched.time}${sched.retryTime ? `（补跑 ${sched.retryTime}）` : ''}`);
+    $('#scheduleModal').classList.remove('show');
+    fetchState().catch(() => {});
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 /* ---------------- toast ---------------- */
 
 let toastTimer;
@@ -391,6 +442,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   connectEvents();
   loadClients();
+  loadSchedule();
 
   document.querySelectorAll('#filterSeg .seg-btn').forEach((b) =>
     b.addEventListener('click', () => {
@@ -398,6 +450,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       render();
     }),
   );
+
+  $('#btnSchedule').addEventListener('click', openSchedule);
+  $('#btnCloseSchedule').addEventListener('click', () => $('#scheduleModal').classList.remove('show'));
+  $('#btnSaveSchedule').addEventListener('click', saveSchedule);
+  $('#scheduleModal').addEventListener('click', (e) => {
+    if (e.target.id === 'scheduleModal') $('#scheduleModal').classList.remove('show');
+  });
 
   $('#btnReport').addEventListener('click', async () => {
     const date = state?.today || new Date().toISOString().slice(0, 10);
@@ -418,7 +477,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.target.id === 'modal') $('#modal').classList.remove('show');
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') $('#modal').classList.remove('show');
+    if (e.key === 'Escape') {
+      $('#modal').classList.remove('show');
+      $('#scheduleModal').classList.remove('show');
+    }
   });
 
   $('#btnRunAll').addEventListener('click', () => startRun([], false));
