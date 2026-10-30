@@ -22,7 +22,7 @@ fi
 read -r HOUR MINUTE <<< "$(cd "$PROJECT_DIR" && node -e '
   const fs = require("fs");
   const cfg = JSON.parse(fs.readFileSync("config.json", "utf8"));
-  const t = String(cfg?.schedule?.time || "08:30");
+  const t = String(cfg?.schedule?.time || "08:00");
   const m = t.match(/^(\d{1,2}):(\d{2})$/);
   if (!m) { console.error("config.json 里 schedule.time 格式应为 HH:MM"); process.exit(1); }
   console.log(Number(m[1]), Number(m[2]));

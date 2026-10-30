@@ -9,8 +9,8 @@
   "platformTimeout": 120000,
   "screenshotKeepDays": 7,
   "schedule": {
-    "time": "08:30",
-    "randomDelayMinutes": 25,
+    "time": "08:00",
+    "randomDelayMinutes": 5,
     "retryTime": "12:30"
   },
   "notify": {
@@ -20,7 +20,7 @@
   },
   "platforms": {
     "doubao-client": {
-      "enabled": false,
+      "enabled": true,
       "type": "client",
       "name": "豆包",
       "app": "/Applications/Doubao.app",
@@ -41,7 +41,7 @@
       "notes": "2026-10 实测：客户端可被 CDP 接管，但当前版本未发现稳定签到入口（活动弹窗为远程投放）"
     },
     "trae-cn": {
-      "enabled": false,
+      "enabled": true,
       "type": "client",
       "name": "Trae CN",
       "app": "/Applications/Trae CN.app",
@@ -65,7 +65,7 @@
       "notes": "需先安装 Trae 国内版并登录（国际版 trae.ai 没有签到）。入口：左下角头像→签到。走 CDP 点真客户端，绕开设备绑定（网页 token 去签会返回 9074）"
     },
     "qoder-cn": {
-      "enabled": false,
+      "enabled": true,
       "type": "client",
       "name": "Qoder CN",
       "app": "/Applications/Qoder.app",
@@ -132,7 +132,7 @@
       ]
     },
     "wanxiang": {
-      "enabled": false,
+      "enabled": true,
       "entryUrls": [
         "https://wanxiang.aliyun.com/"
       ],
@@ -148,7 +148,7 @@
       ]
     },
     "kimi": {
-      "enabled": false,
+      "enabled": true,
       "entryUrls": [
         "https://www.kimi.com/"
       ],
@@ -161,7 +161,7 @@
       "doneKeywords": []
     },
     "wenxin": {
-      "enabled": false,
+      "enabled": true,
       "entryUrls": [
         "https://wenxin.baidu.com/"
       ],
@@ -173,7 +173,7 @@
       "doneKeywords": []
     },
     "yuanbao": {
-      "enabled": false,
+      "enabled": true,
       "entryUrls": [
         "https://yuanbao.tencent.com/chat/"
       ],
@@ -191,7 +191,7 @@
       ]
     },
     "doubao": {
-      "enabled": false,
+      "enabled": true,
       "entryUrls": [
         "https://www.doubao.com/chat/",
         "https://www.doubao.com/work"

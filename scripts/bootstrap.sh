@@ -155,7 +155,7 @@ if [ "$WITH_SERVICE" = 1 ]; then
     ok "（仅检查模式）会安装 launchd：每日签到 + 常驻控制台"
   else
     bash "$PROJECT_DIR/scripts/install-launchd.sh"
-    ok "已安装 launchd（每日 08:30 / 12:30 签到 + 常驻控制台 :7788）"
+    ok "已安装 launchd（每日 08:00 / 12:30 签到 + 常驻控制台 :7788）"
   fi
 else
   warn "未安装系统服务（需要时加 --with-service，或单独运行 scripts/install-launchd.sh）"

@@ -1,6 +1,6 @@
 # 早八（zaoba）
 
-> 每天 8:30，替你领额度。
+> 每天 8:00，替你领额度。
 
 每天定时自动完成 AI 工具的"每日签到 / 领积分"，跑完给你发 macOS 通知 + 一份日报。
 Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
@@ -44,7 +44,7 @@ bash scripts/bootstrap.sh            # ② 安装（幂等，重复执行没问�
 npm run login                        # ③ 登录智谱清言（WorkBuddy 用客户端扫码即可）
 npm run dry-run                      # ④ 演练：只检查不签到
 npm run checkin                      # ⑤ 真跑一次
-bash scripts/install-launchd.sh      # ⑥ 装定时任务（每天 08:30 + 12:30 补跑）+ 常驻控制台
+bash scripts/install-launchd.sh      # ⑥ 装定时任务（每天 08:00 + 12:30 补跑）+ 常驻控制台
 npm run web                          # ⑦ 打开控制台 → http://127.0.0.1:7788
 ```
 
@@ -174,7 +174,7 @@ node src/index.js run --only=workbuddy
 | 客户端没开 | 自动拉起 → 签到 → 退出 |
 | 客户端开着但没开调试端口 | 返回 `needs_manual` 并给出命令，**不会强杀你正在用的窗口** |
 
-**为什么需要常驻调试端口**：如果你早上 8:30 时 WorkBuddy 本来就开着，而它是普通方式启动的（没带调试端口），
+**为什么需要常驻调试端口**：如果你早上 8:00 时 WorkBuddy 本来就开着，而它是普通方式启动的（没带调试端口），
 脚本就接管不了，只能返回 `needs_manual`。所以 `install-launchd.sh` 会做两件事：
 
 1. `launchctl setenv WORKBUDDY_REMOTE_DEBUGGING_PORT=9333` —— 让**任何方式启动**的 WorkBuddy 都带调试端口（仅监听 127.0.0.1）
@@ -199,7 +199,7 @@ node src/index.js run --only=workbuddy
 ## 它是怎么工作的
 
 ```
-launchd（每天 08:30）
+launchd（每天 08:00）
   └─ scripts/run-daily.sh          固定 PATH、单实例锁、0~25 分钟随机延迟
        └─ node src/index.js run --skip-if-done
             ├─ 读 config.json，取启用的平台
@@ -271,7 +271,7 @@ npm run checkin -- --only=trae --headed   # 只跑这一个，确认结果
   "userDataDir": "./profile", // 登录态目录，等价于账号凭据，别提交/分享
   "platformTimeout": 120000,  // 单平台超时（毫秒）
   "schedule": {
-    "time": "08:30",
+    "time": "08:00",
     "randomDelayMinutes": 25  // 0 表示不随机延迟
   },
   "notify": { "macos": true, "webhookUrl": "" },
