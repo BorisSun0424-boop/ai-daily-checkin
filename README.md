@@ -32,35 +32,34 @@ Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
 
 ---
 
+## 安装
+
+三种方式，任选一种：
+
+| 方式 | 适合谁 | 怎么做 |
+| --- | --- | --- |
+| **交给 AI Agent** | 不想碰终端 | 复制 [docs/AGENT-PROMPT.md](./docs/AGENT-PROMPT.md) 里的指令给你的 Agent，它负责装 Node ≥18、依赖、浏览器内核、定时任务 |
+| **一键脚本** | 有终端经验 | `bash scripts/bootstrap.sh`（先 `--check` 自检，加 `--with-service` 装定时任务） |
+| **手动命令** | 想完全掌控 | 见 [docs/INSTALL.md](./docs/INSTALL.md) |
+
+前置条件：macOS 12+、**Node.js ≥ 18**、约 1.5GB 磁盘（依赖 + 570MB 浏览器内核）、macOS 已登录状态。
+
 ## 一分钟上手
 
 ```bash
+git clone https://github.com/BorisSun0424-boop/ai-daily-checkin.git
 cd ai-daily-checkin
-npm install                          # 已装好可跳过
-npx playwright install chromium      # 只需一次（约 150MB）
 
-npm run checkin -- --only=workbuddy  # ① WorkBuddy 不需要登录，直接试（会自己拉起客户端再退出）
-npm run login        # ② 智谱清言需要登录一次（只签 WorkBuddy 的话可跳过）
-npm run dry-run      # ③ 演练：检查登录态，不点击
-npm run checkin      # ④ 真跑一次，看结果
-bash scripts/install-launchd.sh      # ⑤ 装成每天 08:30 自动跑（+0~25 分钟随机延迟）
+bash scripts/bootstrap.sh --check    # ① 自检：看缺 Node / 依赖 / 浏览器内核哪一项
+bash scripts/bootstrap.sh            # ② 安装（幂等，重复执行没问题）
+npm run login                        # ③ 登录智谱清言（WorkBuddy 用客户端扫码即可）
+npm run dry-run                      # ④ 演练：只检查不签到
+npm run checkin                      # ⑤ 真跑一次
+bash scripts/install-launchd.sh      # ⑥ 装定时任务（每天 08:30 + 12:30 补跑）+ 常驻控制台
+npm run web                          # ⑦ 打开控制台 → http://127.0.0.1:7788
 ```
 
-装完之后每天会弹一条通知：
-
-```
-AI 签到 1/1 成功
-✅智谱清言
-```
-
-登录态过期时会明确告诉你，而不会静默失败：
-
-```
-AI 签到 0/1 成功
-🔑 智谱清言: 签到接口返回未登录(40003)，请跑 npm run login
-```
-
----
+详细的权限、电源（睡眠/锁屏）、客户端要求、常见问题见 **[docs/INSTALL.md](./docs/INSTALL.md)**。
 
 ## 常用命令
 
