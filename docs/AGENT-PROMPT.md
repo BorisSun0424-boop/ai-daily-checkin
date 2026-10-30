@@ -42,6 +42,8 @@
 - 否则执行：
     git clone https://github.com/BorisSun0424-boop/zaoba.git
     cd zaoba
+    # 如果 clone 慢或失败（国内网络常见），改用镜像：
+    # git clone https://ghfast.top/https://github.com/BorisSun0424-boop/zaoba.git zaoba
   （仓库是私有的，如果 clone 失败请告诉我需要授权，不要反复重试）
 
 ### 步骤 4：安装依赖与浏览器内核

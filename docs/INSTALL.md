@@ -45,9 +45,12 @@ Agent 会遵守几条硬约束：不删你任何文件、不碰系统目录、`s
 ### 方式 B：一键脚本（有终端经验）
 
 ```bash
-# 1) 拿到代码（仓库私有，需要你的 GitHub 账号有权限）
+# 1) 拿到代码
 git clone https://github.com/BorisSun0424-boop/zaoba.git
 cd zaoba
+
+# 国内直连 github.com 不稳定时，用镜像（内容一致）：
+# git clone https://ghfast.top/https://github.com/BorisSun0424-boop/zaoba.git zaoba
 
 # 2) 先自检，看看缺什么
 bash scripts/bootstrap.sh --check

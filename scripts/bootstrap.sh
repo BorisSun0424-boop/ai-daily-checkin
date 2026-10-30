@@ -29,9 +29,10 @@ for arg in "$@"; do
   esac
 done
 
+FAILED=0
 ok()   { printf "  ✓ %s\n" "$*"; }
 warn() { printf "  ! %s\n" "$*"; }
-fail() { printf "  ✗ %s\n" "$*"; }
+fail() { printf "  ✗ %s\n" "$*"; FAILED=$((FAILED + 1)); }
 step() { printf "\n[%s/7] %s\n" "$1" "$2"; }
 
 echo "早八 zaoba · 安装检查"
@@ -164,7 +165,11 @@ fi
 # ---------------------------------------------------------------- 7. 自检
 step 7 "功能自检"
 if [ "$CHECK_ONLY" = 1 ]; then
-  echo "  · 检查完成。修好上面标 ✗ 的项后，运行 bash scripts/bootstrap.sh 完成安装。"
+  if [ "$FAILED" -gt 0 ]; then
+    echo "  · 检查完成：有 $FAILED 项待处理（退出码 1）。运行 bash scripts/bootstrap.sh 可自动补齐。"
+    exit 1
+  fi
+  echo "  · 检查完成：环境已就绪，可以直接运行 npm run web 或 bash scripts/bootstrap.sh --with-service。"
   exit 0
 fi
 

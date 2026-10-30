@@ -39,6 +39,9 @@ Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
 git clone https://github.com/BorisSun0424-boop/zaoba.git
 cd zaoba
 
+# 国内直连 GitHub 不稳定时，用镜像（内容相同）：
+# git clone https://ghfast.top/https://github.com/BorisSun0424-boop/zaoba.git zaoba
+
 bash scripts/bootstrap.sh --check    # ① 自检：看缺 Node / 依赖 / 浏览器内核哪一项
 bash scripts/bootstrap.sh            # ② 安装（幂等，重复执行没问题）
 npm run login                        # ③ 登录智谱清言（WorkBuddy 用客户端扫码即可）
