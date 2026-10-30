@@ -333,7 +333,7 @@ export async function webCommand({ port = 7788 } = {}) {
   const s = await startServer({ port, logger });
   console.log('');
   console.log('  ╭──────────────────────────────────────────────╮');
-  console.log(`  │  AI 签到台  →  ${s.url.padEnd(29)}│`);
+  console.log(`  │  早八 zaoba  →  ${s.url.padEnd(29)}│`);
   console.log('  ╰──────────────────────────────────────────────╯');
   console.log('  · 只监听 127.0.0.1，不对外网开放');
   console.log('  · Ctrl+C 停止');

@@ -1,4 +1,4 @@
-/* AI 签到台 · 原生 JS，无构建步骤 */
+/* 早八 · 原生 JS，无构建步骤 */
 
 const $ = (sel) => document.querySelector(sel);
 

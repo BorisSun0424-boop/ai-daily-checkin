@@ -34,7 +34,7 @@ warn() { printf "  ! %s\n" "$*"; }
 fail() { printf "  ✗ %s\n" "$*"; }
 step() { printf "\n[%s/7] %s\n" "$1" "$2"; }
 
-echo "AI 签到工具 · 安装检查"
+echo "早八 zaoba · 安装检查"
 echo "项目目录: $PROJECT_DIR"
 echo "模式: $([ "$CHECK_ONLY" = 1 ] && echo '仅检查' || echo '完整安装')"
 

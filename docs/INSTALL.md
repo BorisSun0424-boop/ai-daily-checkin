@@ -1,4 +1,4 @@
-# 安装与权限说明
+# 早八 · 安装与权限说明
 
 面向"想在自己 Mac 上跑起来"的用户。全程不需要终端经验的部分会标注 **[交给 AI Agent]**。
 
@@ -46,8 +46,8 @@ Agent 会遵守几条硬约束：不删你任何文件、不碰系统目录、`s
 
 ```bash
 # 1) 拿到代码（仓库私有，需要你的 GitHub 账号有权限）
-git clone https://github.com/BorisSun0424-boop/ai-daily-checkin.git
-cd ai-daily-checkin
+git clone https://github.com/BorisSun0424-boop/zaoba.git
+cd zaoba
 
 # 2) 先自检，看看缺什么
 bash scripts/bootstrap.sh --check
@@ -77,7 +77,7 @@ curl -fLO https://nodejs.org/dist/v22.14.0/node-v22.14.0.pkg && sudo installer -
 # 或 nvm install --lts
 
 # 2) 依赖与浏览器内核
-cd ai-daily-checkin
+cd zaoba
 npm install
 npx playwright install chromium
 
@@ -174,7 +174,7 @@ pmset -g sched      # 看已排的唤醒事件
 ## 6. 日常使用
 
 ```bash
-cd ai-daily-checkin
+cd zaoba
 
 npm run web        # 可视化控制台 → http://127.0.0.1:7788（常驻服务时自动启动）
 npm run list       # 平台状态
@@ -199,7 +199,7 @@ data/log/                  日志
 
 ```bash
 # 升级
-cd ai-daily-checkin && git pull && npm install
+cd zaoba && git pull && npm install
 
 # 只停掉定时任务（保留数据与登录态）
 bash scripts/uninstall-launchd.sh

@@ -14,7 +14,7 @@ import { statusIcon, readResultsJSONL } from './notify.js';
 import { today } from './util.js';
 
 const HELP = `
-AI 每日签到工具（详见 README.md / RESEARCH.md）
+早八 zaoba · 每天 8:30 替你领额度（详见 README.md / RESEARCH.md）
 
 当前默认只启用「智谱清言」—— 六家里唯一确认能全自动签到的。
 其余平台的调研结论见 RESEARCH.md；想加新平台看 README「加新平台」一节。

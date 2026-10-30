@@ -1,4 +1,6 @@
-# AI 每日签到工具（ai-daily-checkin）
+# 早八（zaoba）
+
+> 每天 8:30，替你领额度。
 
 每天定时自动完成 AI 工具的"每日签到 / 领积分"，跑完给你发 macOS 通知 + 一份日报。
 Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
@@ -34,8 +36,8 @@ Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
 ## 一分钟上手
 
 ```bash
-git clone https://github.com/BorisSun0424-boop/ai-daily-checkin.git
-cd ai-daily-checkin
+git clone https://github.com/BorisSun0424-boop/zaoba.git
+cd zaoba
 
 bash scripts/bootstrap.sh --check    # ① 自检：看缺 Node / 依赖 / 浏览器内核哪一项
 bash scripts/bootstrap.sh            # ② 安装（幂等，重复执行没问题）
@@ -294,7 +296,7 @@ npm run checkin -- --only=trae --headed   # 只跑这一个，确认结果
 | `timeout` | 站点慢 | 调大 `platformTimeout` |
 | `uncertain` | 点了但页面无明确提示 | 看截图确认，成功的话把提示文案加进 `doneKeywords` |
 | 定时任务没跑 | 电脑在设定时间休眠 | macOS 唤醒后会补跑；先手动 `CHECKIN_NO_DELAY=1 bash scripts/run-daily.sh` 验证 |
-| `Profile 被占用` | 有残留进程或两实例争抢 | 脚本用 `data/.run.lock` 防并发；残留时 `pkill -f "ai-daily-checkin/profile"` |
+| `Profile 被占用` | 有残留进程或两实例争抢 | 脚本用 `data/.run.lock` 防并发；残留时 `pkill -f "zaoba/profile"` |
 
 ### 运行记录（本机真实跑出来的）
 

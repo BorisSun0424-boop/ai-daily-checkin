@@ -1,4 +1,4 @@
-# 交给 AI Agent 的安装指令
+# 交给 AI Agent 的安装指令（早八）
 
 把下面整段复制给你常用的 AI Agent（Claude Code / Cursor / DeepSeek Harness / WorkBuddy / Codex 等）即可，它会在你的 Mac 上完成安装、登录引导和验证。
 
@@ -40,8 +40,8 @@
 ### 步骤 3：获取代码
 - 如果我已经把项目放在本地，问我路径后 cd 进去
 - 否则执行：
-    git clone https://github.com/BorisSun0424-boop/ai-daily-checkin.git
-    cd ai-daily-checkin
+    git clone https://github.com/BorisSun0424-boop/zaoba.git
+    cd zaoba
   （仓库是私有的，如果 clone 失败请告诉我需要授权，不要反复重试）
 
 ### 步骤 4：安装依赖与浏览器内核
