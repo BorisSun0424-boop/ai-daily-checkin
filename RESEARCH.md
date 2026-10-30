@@ -269,3 +269,67 @@ node src/index.js run --only=workbuddy
 
 > 两者都已在 `config.json` 里预置为 `trae-cn` / `qoder-cn`（默认关闭）。
 > 装好客户端并登录后：`npm run clients -- --probe=Trae` → `npm run enable -- trae-cn`。
+
+---
+
+## 12. 豆包工作（DoubaoWork）—— 每日签到 +200 额度（2026-10-30 打通）
+
+之前误判为"网页端没有入口"，实际入口在客户端的一个**内置侧边浏览器面板**里，不在主界面。
+
+### 定位过程
+
+| 步骤 | 发现 |
+| --- | --- |
+| 1 | 客户端是 Chromium 壳，`--remote-debugging-port=9444` 可用，主页面 `doubaowork://doubaowork-chat/chat` |
+| 2 | 主界面和设置菜单里都没有"积分/签到"字样 |
+| 3 | 左下角账号菜单里有个「**免费用豆包**」入口 |
+| 4 | 点开后是应用内嵌的侧边浏览器面板，URL：`https://www.doubao.com/pc/agent-explore` |
+| 5 | 面板第一项就是「**每日签到 +200 额度**」+「立即签到」按钮 |
+
+### 页面内容（实测）
+
+```
+每日签到            +200 额度     [立即签到]
+选择工作领域领取奖励   +100 额度     [去完成] （至少选一个领域，完成后手动领取）
+零散资料整理成一份文档 +100 额度     [去完成]
+按需求快速生成实用表格 +100 额度     [去完成]
+豆包帮你整理电脑资料   +100 额度     [去完成]
+调用技能完成一项办公任务 +100 额度   [去完成]
+```
+
+注意：只有「每日签到 +200」是**一键领取**的，其余是任务制（"去完成"要真的做任务，脚本不碰）。
+
+### 相关接口（状态查询用）
+
+- `POST https://www.doubao.com/biz/get_campaign/v3/status/`
+- `POST https://www.doubao.com/alice/ug/campaign/v3/detail/`
+- （更早发现的通用领取接口：`/alice/ug/campaign/list/`、`/alice/ug/campaign/item/reward/claim/`，参数含 `campaign_group_code` / `campaign_item_code` / `task_id`）
+
+### 实现方式
+
+用通用客户端适配器（`clientApp`）+ 配置：
+
+```jsonc
+"doubaowork-client": {
+  "enabled": true,
+  "type": "client",
+  "app": "/Applications/DoubaoWork.app",
+  "port": 9444,
+  "openUrl": "https://www.doubao.com/pc/agent-explore",   // 直接在自己的会话里打开任务面板
+  "keywords": ["立即签到"],
+  "doneKeywords": ["已领取", "今日已签到", "明天再来"],
+  "autoRestart": true                                     // 客户端开着但没调试端口时自动重启一次
+}
+```
+
+### 两个坑（都已处理）
+
+1. **全局单实例锁**：客户端在跑时，带 `--remote-debugging-port` 再启动会直接退出。所以必须先让它退出。
+2. **它不会立刻退出**：`osascript quit` 可能触发"确认退出"对话框，20 秒内退不掉。适配器改成三级升级：
+   `osascript quit` → `SIGTERM` → `SIGKILL`，然后才用调试端口重启。
+   如果客户端原本就在运行，签完**保持运行**，不打断你使用。
+
+### 实测结果
+
+- 已手动确认：点击「立即签到」后按钮消失、页面出现「已领取」，+200 额度到账
+- 适配器三种场景全部验证通过：客户端在跑（有端口）直接接管 / 没跑自动启动后退出 / 在跑但无端口自动重启接管并保留运行

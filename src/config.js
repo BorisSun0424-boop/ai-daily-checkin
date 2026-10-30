@@ -57,16 +57,20 @@ const CLIENT_PLATFORM_DEFAULTS = {
       '需先安装 Qoder 国内版并登录。入口：左下角「用量面板→礼物图标」，每日 100 Credits（10:00→次日 10:00，错过不补）。旧 /daily-check-in 接口已 DISABLED，现走活动平台',
   },
   'doubaowork-client': {
-    enabled: false,
+    enabled: true,
     type: 'client',
     name: '豆包工作',
     app: '/Applications/DoubaoWork.app',
     port: 9444,
     cdpMode: 'arg',
-    pageUrlMatch: 'doubaowork-chat',
-    keywords: ['签到', '每日签到', '领取', '立即领取'],
-    doneKeywords: ['今日已签到', '已签到', '明天再来'],
-    notes: '2026-10 实测：客户端可被 CDP 接管，未发现签到入口；额度相关接口为 /alice/commerce/sale/subscription/quota/summary/',
+    // 「免费用豆包」侧边面板就是任务中心，首项是每日签到（+200 额度）
+    openUrl: 'https://www.doubao.com/pc/agent-explore',
+    keywords: ['立即签到'],
+    doneKeywords: ['已领取', '今日已签到', '明天再来'],
+    autoRestart: true,
+    quitAppName: 'DoubaoWork',
+    keepRunning: true,
+    notes: '每日签到 +200 额度（在「免费用豆包」面板里）；脚本会自动打开该面板并点「立即签到」',
   },
 };
 const DEFAULT_DONE = ['今日已签到', '已签到', '已领取', '明天再来', '今日已完成'];
@@ -122,8 +126,16 @@ export function loadConfig({ createIfMissing = true } = {}) {
   cfg.notify = { ...def.notify, ...(user.notify || {}) };
   cfg.schedule = { ...def.schedule, ...(user.schedule || {}) };
 
-  // 内置客户端平台默认值 + 用户自定义平台，再合并内置网页适配器
-  cfg.platforms = { ...CLIENT_PLATFORM_DEFAULTS, ...(user.platforms || {}) };
+  // 内置客户端平台：默认值 + 用户覆盖（逐字段合并，避免老配置吞掉新增字段）
+  const userPlatforms = user.platforms || {};
+  const mergedPlatforms = {};
+  for (const [id, def] of Object.entries(CLIENT_PLATFORM_DEFAULTS)) {
+    mergedPlatforms[id] = { ...def, ...(userPlatforms[id] || {}) };
+  }
+  for (const [id, u] of Object.entries(userPlatforms)) {
+    mergedPlatforms[id] = { ...(mergedPlatforms[id] || {}), ...u };
+  }
+  cfg.platforms = mergedPlatforms;
   for (const a of adapters) {
     cfg.platforms[a.id] = { ...def.platforms[a.id], ...(user.platforms?.[a.id] || {}) };
   }

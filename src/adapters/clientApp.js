@@ -67,6 +67,41 @@ export function resolveExecutable(pc) {
   return appOrBin;
 }
 
+async function gracefulQuitApp(pc, execPath, logger) {
+  const appName = pc.quitAppName || String(pc.name || '').replace(/\s+/g, '');
+  const bundleDir = execPath.includes('.app/Contents/')
+    ? execPath.slice(0, execPath.indexOf('.app/Contents/') + 4)
+    : '';
+
+  const gone = async () => !(await asynIsRunning(execPath));
+
+  // 1) 优雅退出（macOS 原生方式）
+  if (appName) await exec('osascript', ['-e', `quit app "${appName}"`]).catch(() => null);
+  for (let i = 0; i < 16; i++) {
+    if (await gone()) return true;
+    await sleep(500);
+  }
+
+  // 2) SIGTERM：有些客户端会弹"确认退出"对话框，等不到就升级
+  logger?.warn('优雅退出未完成，发送 SIGTERM');
+  await exec('pkill', ['-f', execPath]).catch(() => null);
+  for (let i = 0; i < 12; i++) {
+    if (await gone()) return true;
+    await sleep(500);
+  }
+
+  // 3) SIGKILL：强杀（聊天记录在服务端，本地只丢草稿，属可接受的兜底）
+  logger?.warn('SIGTERM 无效，强制结束进程（会丢失未发送草稿）');
+  if (bundleDir) await exec('pkill', ['-9', '-f', `${bundleDir}/Contents`]).catch(() => null);
+  else await exec('pkill', ['-9', '-f', execPath]).catch(() => null);
+  for (let i = 0; i < 10; i++) {
+    if (await gone()) return true;
+    await sleep(500);
+  }
+  logger?.warn('客户端仍未退出，后续可能因单实例锁失败');
+  return false;
+}
+
 async function quitApp(pid, execPath, logger) {
   try {
     if (pid) process.kill(pid, 'SIGTERM');
@@ -97,13 +132,19 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
   // 1) 端口已在监听 → 直接接管；否则按配置拉起客户端
   let version = await cdpVersion(port);
   let launchedPid = null;
+  const wasRunningAtStart = await asynIsRunning(execPath);
 
   if (!version) {
-    if (await asynIsRunning(execPath)) {
-      return {
-        status: 'needs_manual',
-        detail: `客户端正在运行但没有开启调试端口 ${port}。请先退出它，再重跑（脚本不会强杀你正在用的窗口）`,
-      };
+    if (wasRunningAtStart) {
+      if (!pc.autoRestart) {
+        return {
+          status: 'needs_manual',
+          detail: `客户端正在运行但没有开启调试端口 ${port}。请先退出它，再重跑（或在 config 里设 autoRestart: true）`,
+        };
+      }
+      // autoRestart：优雅退出后带调试端口重启，签完保持运行（恢复你的使用状态）
+      logger?.info(`${pc.name || '客户端'} 在运行但无调试端口，自动重启一次以开启接管`);
+      await gracefulQuitApp(pc, execPath, logger);
     }
 
     const env = { ...process.env };
@@ -247,11 +288,19 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
     if (out.success) return { status: 'success', detail: `点击「${res.text}」后出现成功提示` };
     if (out.fail) return { status: 'failed', detail: `点击「${res.text}」后出现失败提示` };
     if (res.clicked) {
-      await sleep(1200);
-      const t2 = await pageText(page, 4000);
+      await sleep(1800);
+      const t2 = await pageText(page, 5000);
       const o2 = classifyOutcome(t2);
+      const doneHit2 = (pc.doneKeywords || []).find((k) => t2.includes(k));
+      const stillThere = (await findClickables(page, pc.keywords || ['签到'])).length > 0;
+
+      // 最可信的判定：点完之后入口按钮消失了，且页面出现"已领取/已签到"类文案
+      if (!stillThere && doneHit2) {
+        return { status: 'success', detail: `点击「${res.text}」后入口消失，页面显示「${doneHit2}」` };
+      }
       if (o2.success || o2.already) return { status: 'success', detail: `点击后页面提示 ${o2.success ? '成功' : '已完成'}` };
-      return { status: 'uncertain', detail: `已点击「${res.text}」，但没读到明确结果（截图见 data/shots）` };
+      if (stillThere) return { status: 'uncertain', detail: `已点击「${res.text}」但入口仍在，可能点击落到了遮挡层（看截图）` };
+      return { status: 'uncertain', detail: `已点击「${res.text}」，入口已消失但没读到明确文案（看截图）` };
     }
     return { status: 'not_found', detail: `页面里没找到关键词按钮：${(pc.keywords || []).join('/')}` };
   } catch (e) {
@@ -263,6 +312,7 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
     } catch {
       /* ignore */
     }
-    if (launchedPid && quitAfter) await quitApp(launchedPid, execPath, logger);
+    // 如果原本就在运行（我们只是重启它），签完保留运行，不打断使用
+    if (launchedPid && quitAfter && !wasRunningAtStart) await quitApp(launchedPid, execPath, logger);
   }
 }
