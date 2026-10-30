@@ -100,7 +100,7 @@ export function defaultConfig() {
     navTimeout: 45000,
     platformTimeout: 120000,
     screenshotKeepDays: 7,
-    schedule: { time: '08:30', randomDelayMinutes: 25 },
+    schedule: { time: '08:00', retryTime: '12:30', randomDelayMinutes: 5 },
     notify: { macos: true, sound: true, webhookUrl: '' },
     platforms: { ...CLIENT_PLATFORM_DEFAULTS, ...platforms },
   };

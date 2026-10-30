@@ -1,5 +1,7 @@
 # 早八（zaoba）
 
+[![CI](https://github.com/BorisSun0424-boop/zaoba/actions/workflows/ci.yml/badge.svg)](https://github.com/BorisSun0424-boop/zaoba/actions/workflows/ci.yml)
+
 > 每天 8:00，替你领额度。
 
 每天定时自动完成 AI 工具的"每日签到 / 领积分"，跑完给你发 macOS 通知 + 一份日报。
