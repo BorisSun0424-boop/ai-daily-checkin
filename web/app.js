@@ -154,6 +154,13 @@ function renderPlatforms() {
     }
     card.append(strip);
 
+    /* --- 需要用户操作时：先给一行说明，再给按钮 --- */
+    const act = computeAction(p);
+    if (act) {
+      const note = el('div', `action-note${p.unsupported ? ' muted-note' : ''}`, act.note);
+      card.append(note);
+    }
+
     /* --- 底部：开关 + 操作 --- */
     const foot = el('div', 'card-foot');
 
@@ -181,31 +188,11 @@ function renderPlatforms() {
     foot.append(sw);
 
     const btns = el('div', 'head-actions');
-    if (p.enabled && p.unsupported) {
-      // 没有可用签到入口，不给操作按钮
-    } else if (p.enabled && p.kind === 'client' && p.clientInstalled === false && p.downloadUrl) {
-      // 见下方分支
-      const dl = el('button', 'btn tiny primary', '去下载');
-      dl.title = '打开官方下载页，装好后回来点「签到」';
-      dl.addEventListener('click', () => window.open(p.downloadUrl, '_blank'));
-      btns.append(dl);
-    } else if (p.enabled && p.kind === 'client' && p.needsLogin) {
-      const open = el('button', 'btn tiny primary', '打开客户端');
-      open.title = '帮你打开客户端，在里面扫码登录后回来点「签到」';
-      open.addEventListener('click', () => openClient(p));
-      btns.append(open);
-    } else if (p.enabled && p.kind === 'web' && p.needsLogin) {
-      const loginBtn = el('button', 'btn tiny primary', '去登录');
-      loginBtn.title = '弹出登录窗口，扫码后自动保存登录态';
-      loginBtn.addEventListener('click', () => beginLogin(p));
-      btns.append(loginBtn);
-    }
-    const FAILED_STATUS = ['not_found', 'error', 'timeout', 'needs_manual', 'uncertain'];
-    if (p.enabled && FAILED_STATUS.includes(p.todayStatus)) {
-      const retry = el('button', 'btn tiny', '重试');
-      retry.title = '重新跑一次这个平台';
-      retry.addEventListener('click', () => startRun([p.id], false));
-      btns.append(retry);
+    if (act && act.label) {
+      const actBtn = el('button', 'btn tiny primary', act.label);
+      actBtn.title = act.note;
+      actBtn.addEventListener('click', act.action);
+      btns.append(actBtn);
     }
     const dry = el('button', 'btn tiny', '演练');
     dry.disabled = running || !p.enabled || p.unsupported;
@@ -332,6 +319,49 @@ function connectEvents() {
     // 服务重启后自动重连由 EventSource 负责；这里只提示一次
     appendLog('· 与服务的实时连接断开，正在重连…', 'warn');
   };
+}
+
+/* ---------------- 每个平台需要用户做什么 ---------------- */
+
+/**
+ * 返回当前平台该提示什么、该给什么按钮。
+ * 文案原则：说清"为什么不行 + 点了会发生什么"，不只放一个按钮。
+ */
+function computeAction(p) {
+  if (!p.enabled || running) return null;
+  if (p.unsupported) {
+    return { note: '这个平台没有可自动领取的入口，启用也不会执行', label: '' };
+  }
+  if (p.kind === 'client' && p.clientInstalled === false) {
+    return {
+      note: '还没安装这个客户端，签到只能在里面做',
+      label: '下载客户端',
+      action: () => window.open(p.downloadUrl, '_blank'),
+    };
+  }
+  if (p.needsLogin) {
+    if (p.kind === 'client') {
+      return {
+        note: '客户端已安装，但还没登录：打开后扫码登录，再回来点「签到」',
+        label: '打开客户端',
+        action: () => openClient(p),
+      };
+    }
+    return {
+      note: '网页登录态已失效：点右侧按钮扫码，成功后自动保存',
+      label: '去登录',
+      action: () => beginLogin(p),
+    };
+  }
+  const failed = ['not_found', 'error', 'timeout', 'needs_manual', 'uncertain'].includes(p.todayStatus);
+  if (failed) {
+    return {
+      note: `上次失败：${p.todayDetail || '未知原因'}——可以先重试一次`,
+      label: '重试',
+      action: () => startRun([p.id], false),
+    };
+  }
+  return null;
 }
 
 /* ---------------- 打开客户端 ---------------- */

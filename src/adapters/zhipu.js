@@ -101,7 +101,7 @@ export default defineAdapter({
 
     // 未登录 / token 失效
     if (ck.http === 401 || code === '40003' || code === '40102' || code === '401') {
-      return { status: 'needs_login', detail: `签到接口返回未登录(${code || ck.http})，请跑 npm run login` };
+      return { status: 'needs_login', detail: `签到接口返回未登录(${code || ck.http})，请点卡片上的「去登录」（或运行 npm run login）` };
     }
 
     // 今日已领（幂等，正常情况）
