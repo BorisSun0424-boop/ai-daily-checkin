@@ -37,6 +37,9 @@ function lastDates(n) {
   return out;
 }
 
+/** 「去登录」按钮的状态（同一时间只允许一个登录窗口） */
+const loginState = { id: null, proc: null, status: 'idle', startedAt: null, code: null };
+
 /** 汇总前端需要的全部状态 */
 export function buildState() {
   const cfg = loadConfig();
@@ -236,6 +239,46 @@ export async function startServer({ port = 7788, logger } = {}) {
         const file = path.resolve('data/reports', `${date}.md`);
         if (!fs.existsSync(file)) return json(res, 404, { error: '没有这一天的报告' });
         return json(res, 200, { date, markdown: fs.readFileSync(file, 'utf8') });
+      }
+
+      if (p.startsWith('/api/login/') && req.method === 'POST') {
+        const id = decodeURIComponent(p.slice('/api/login/'.length));
+        if (loginState.proc) {
+          return json(res, 409, { error: '已有登录窗口在等待，请先完成或关闭它' });
+        }
+        const child = spawn(process.execPath, [path.join('src', 'login-one.js'), id], {
+          cwd: process.cwd(),
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        loginState.id = id;
+        loginState.proc = child;
+        loginState.status = 'running';
+        loginState.startedAt = Date.now();
+        loginState.code = null;
+        const relay = (buf) => {
+          for (const line of String(buf).split('\n')) {
+            const t = line.trim();
+            if (t) broadcast({ type: 'log', level: 'info', line: t });
+          }
+        };
+        child.stdout.on('data', relay);
+        child.stderr.on('data', relay);
+        child.on('close', (code) => {
+          loginState.proc = null;
+          loginState.code = code;
+          loginState.status = code === 0 ? 'ok' : code === 2 ? 'timeout' : code === 3 ? 'client' : 'error';
+          broadcast({ type: 'state' });
+        });
+        return json(res, 202, { ok: true, id });
+      }
+
+      if (p === '/api/login/status' && req.method === 'GET') {
+        return json(res, 200, {
+          id: loginState.id,
+          status: loginState.status,
+          startedAt: loginState.startedAt,
+          code: loginState.code,
+        });
       }
 
       if (p === '/api/schedule' && req.method === 'GET') {

@@ -180,6 +180,14 @@ function renderPlatforms() {
     foot.append(sw);
 
     const btns = el('div', 'head-actions');
+    if (p.needsLogin && p.enabled) {
+      const loginBtn = el('button', 'btn tiny primary', p.kind === 'web' ? '去登录' : '怎么登录');
+      loginBtn.title = p.kind === 'web'
+        ? '弹出登录窗口，扫码后自动保存登录态'
+        : '这个平台的登录在客户端里完成';
+      loginBtn.addEventListener('click', () => beginLogin(p));
+      btns.append(loginBtn);
+    }
     const dry = el('button', 'btn tiny', '演练');
     dry.disabled = running || !p.enabled;
     dry.addEventListener('click', () => startRun([p.id], true));
@@ -303,6 +311,55 @@ function connectEvents() {
     // 服务重启后自动重连由 EventSource 负责；这里只提示一次
     appendLog('· 与服务的实时连接断开，正在重连…', 'warn');
   };
+}
+
+/* ---------------- 去登录 ---------------- */
+
+let loginPoll = null;
+
+async function beginLogin(p) {
+  if (p.kind !== 'web') {
+    toast(`${p.name} 的登录在客户端里完成：打开客户端扫码登录后，回来点「签到」`);
+    return;
+  }
+  try {
+    const r = await fetch(`/api/login/${encodeURIComponent(p.id)}`, { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '启动登录失败');
+    toast('登录窗口已弹出，扫码完成后会自动保存');
+    pollLogin(p);
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function pollLogin(p) {
+  clearInterval(loginPoll);
+  let ticks = 0;
+  loginPoll = setInterval(async () => {
+    ticks += 1;
+    try {
+      const r = await fetch('/api/login/status');
+      const s = await r.json();
+      if (s.status === 'running') {
+        if (ticks > 240) clearInterval(loginPoll);
+        return;
+      }
+      clearInterval(loginPoll);
+      if (s.status === 'ok') {
+        toast(`${p.name} 登录成功`);
+        await fetchState();
+      } else if (s.status === 'timeout') {
+        toast('登录超时，可以再点一次「去登录」', true);
+      } else if (s.status === 'client') {
+        toast('这个平台需要在客户端里登录', true);
+      } else if (s.status === 'error') {
+        toast('登录失败，看下方运行日志', true);
+      }
+    } catch {
+      clearInterval(loginPoll);
+    }
+  }, 2500);
 }
 
 /* ---------------- 客户端扫描 ---------------- */
@@ -453,6 +510,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const adv = document.querySelector('details.advanced');
   if (adv) adv.addEventListener('toggle', () => { if (adv.open) loadClients(); });
   loadSchedule();
+  fetch('/api/login/status').then((r) => r.json()).then((s) => {
+    if (s.status === 'running') toast('登录窗口还开着，完成扫码后会自动保存');
+  }).catch(() => {});
 
   document.querySelectorAll('#filterSeg .seg-btn').forEach((b) =>
     b.addEventListener('click', () => {

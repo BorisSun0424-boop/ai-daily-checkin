@@ -524,3 +524,8 @@ main {
 .advanced[open] > summary::before { content: "▾"; }
 .advanced > summary h2 { margin: 0; }
 .advanced .clients { padding: 0 16px 14px; }
+
+/* 卡片底部按钮不要被挤压 */
+.card-foot { flex-wrap: wrap; gap: 8px; }
+.card-foot .head-actions { flex-wrap: wrap; }
+.card-foot .btn { white-space: nowrap; flex: 0 0 auto; }
