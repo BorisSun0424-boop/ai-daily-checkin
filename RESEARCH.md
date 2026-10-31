@@ -371,3 +371,21 @@ node src/index.js run --only=workbuddy
 
 > 注意：Trae 的签到是**账户菜单项**，不是页面按钮；如果以后菜单层级变了，
 > 用 `npm run clients -- --probe=Trae` 加上截图定位新的 trigger 选择器即可。
+
+
+---
+
+## 14. MiniMax Code 签到（2026-10-31 接入）
+
+- 入口：网页版 `https://agent.minimax.cn`（Next.js SPA），无需桌面客户端
+- 规则（官方文档 agent.minimaxi.com/docs/code/account/usage 与前端 bundle 双向确认）：
+  - 每日签到 **400 积分**
+  - 连续第 4 天、第 7 天单日加码到 **1000 积分**，一周累计约 **4000**
+  - 签到积分 30 天内有效，仅限 MiniMax Code 使用
+- UI 文案（从前端 i18n 提取，用于状态判断）：
+  - 入口：`每日签到`（账户菜单内）
+  - 进行中：`签到中…`
+  - 已签：`今日已签到`
+  - 成功：`签到成功 +{{points}} 积分`
+- 实现：`src/adapters/minimax.js`，standalone 适配器，Playwright 复用 `profile/` 登录态
+- 登录：`npm run login:minimax` 弹出窗口，自动检测登录成功后保存退出

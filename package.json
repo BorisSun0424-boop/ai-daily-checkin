@@ -19,7 +19,8 @@
     "schedule": "node src/index.js schedule",
     "service:install": "node src/index.js install-service",
     "service:uninstall": "node src/index.js uninstall-service",
-    "open": "node src/open-console.js"
+    "open": "node src/open-console.js",
+    "login:minimax": "node src/minimax-login.js"
   },
   "dependencies": {
     "playwright": "^1.48.0"

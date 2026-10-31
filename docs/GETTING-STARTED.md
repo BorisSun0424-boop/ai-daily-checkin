@@ -13,6 +13,7 @@
 | **WorkBuddy** | ✅ 要装腾讯客户端 | ✅ 客户端内扫码 | 100 Credits |
 | **豆包工作** | ✅ 要装字节客户端 | ✅ 客户端内扫码 | +200 额度 |
 | **智谱清言** | ❌ 不用客户端 | ✅ 项目里扫码一次 | 登录积分 |
+| **MiniMax Code** | ❌ 网页版，不用客户端 | ✅ `npm run login:minimax` | 400 积分/天（第 4/7 天 1000） |
 | Trae CN / Qoder CN | ✅ 要装各自客户端 | ✅ 客户端内登录 | 150 / 100（需手动启用） |
 | Kimi / 文心 / 千问 / 元宝 | — | — | 没有可自动的签到，做不了 |
 
@@ -82,7 +83,8 @@ bash scripts/bootstrap.sh
 在项目目录执行：
 
 ```bash
-npm run login
+npm run login            # 所有网页类平台
+npm run login:minimax    # 只登录 MiniMax（登录成功后自动保存退出）
 ```
 
 会弹出一个浏览器窗口，**扫码登录**，然后回终端按回车保存。登录态存在本项目的 `profile/` 目录里。
