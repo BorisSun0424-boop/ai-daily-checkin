@@ -8,7 +8,9 @@
 import { launchContext } from './browser.js';
 import { loadConfig } from './config.js';
 import { pageText } from './dom.js';
-import { logger } from './logger.js';
+import { createLogger } from './logger.js';
+
+const logger = createLogger('minimax-login');
 import { sleep } from './util.js';
 
 const HOME = 'https://agent.minimax.cn/';
@@ -58,12 +60,7 @@ async function main() {
       await ctx.close();
       process.exit(0);
     }
-    if (text.includes('新建任务') && !text.includes('登录 / 注册')) {
-      logger.info('✅ 页面已是登录状态，保存退出');
-      await sleep(1500);
-      await ctx.close();
-      process.exit(0);
-    }
+    // 说明：页面上的「新建任务」在未登录时也显示，不能用它判断，只认接口
   }
 
   logger.warn(`超过 ${MAX_MINUTES} 分钟仍未检测到登录，已退出`);
