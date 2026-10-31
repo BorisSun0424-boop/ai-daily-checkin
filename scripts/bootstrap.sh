@@ -123,14 +123,11 @@ fi
 step 4 "浏览器内核（首次约 570MB，可复用系统浏览器省掉）"
 BROWSER_CACHE="${HOME}/Library/Caches/ms-playwright"
 
-# 全新安装（还没有 profile/）时，优先复用系统 Chrome / Edge，省 570MB
+# 只有 Windows 才复用系统 Edge（省 570MB）；macOS 统一用 Playwright 自带 Chromium
+# 原因：macOS 上用 channel=chrome 启动自定义 profile 会卡在握手阶段，窗口不出现
 SYSTEM_CHANNEL=""
-if [ "${FORCE_BROWSER:-0}" != "1" ] && [ ! -d "$PROJECT_DIR/profile" ]; then
-  if [ -d "/Applications/Google Chrome.app" ]; then
-    SYSTEM_CHANNEL="chrome"
-  elif [ -d "/Applications/Microsoft Edge.app" ]; then
-    SYSTEM_CHANNEL="msedge"
-  fi
+if [ "${FORCE_BROWSER:-0}" != "1" ] && [ "$(uname -s)" = "Darwin" ]; then
+  SYSTEM_CHANNEL=""
 fi
 
 if [ -n "${SYSTEM_CHANNEL}" ]; then

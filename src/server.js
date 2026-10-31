@@ -311,6 +311,18 @@ export async function startServer({ port = 7788, logger } = {}) {
             if (t) broadcast({ type: 'log', level: 'info', line: t });
           }
         };
+        // 兜底：登录窗口异常挂起时，15 分钟后强制结束并置为超时
+        const killer = setTimeout(() => {
+          try {
+            child.kill();
+          } catch {
+            /* ignore */
+          }
+          loginState.status = 'timeout';
+          loginState.proc = null;
+          broadcast({ type: 'state' });
+        }, 15 * 60 * 1000);
+        child.on('close', () => clearTimeout(killer));
         child.stdout.on('data', relay);
         child.stderr.on('data', relay);
         child.on('close', (code) => {

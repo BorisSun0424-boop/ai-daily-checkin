@@ -69,7 +69,13 @@ async function main() {
     process.exit(1);
   }
 
-  const ctx = await launchContext(cfg, { headless: false, logger });
+  // 启动浏览器可能卡住（例如 channel 指向的系统浏览器不响应），必须设超时
+  const ctx = await Promise.race([
+    launchContext(cfg, { headless: false, logger }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('浏览器启动超时（60 秒）——可能是 config.json 里的 channel 指向了无法启动的浏览器，可删掉 channel 字段重试')), 60000),
+    ),
+  ]);
   const page = await ctx.newPage();
   logger.info(`打开 ${adapter.name} 登录页: ${url}`);
 

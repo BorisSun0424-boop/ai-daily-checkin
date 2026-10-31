@@ -1,6 +1,6 @@
 {
   "name": "zaoba",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "private": true,
   "type": "module",
   "description": "早八 · 每天自动完成 AI 工具签到（WorkBuddy / 豆包工作 / 智谱），支持 macOS 与 Windows，带本地可视化控制台",
