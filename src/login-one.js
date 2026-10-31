@@ -20,8 +20,8 @@ const logger = createLogger('login');
 const DETECT = {
   minimax: async (page) => {
     const text = await pageText(page).catch(() => '');
-    const loginForm = /微信扫码登录|获取验证码|请输入您的手机号/.test(text);
-    const logged = /每日签到|签到得|MiniMax\d+/.test(text);
+    const loginForm = /微信扫码登录|获取验证码|请输入您的手机号|立即登录/.test(text);
+    const logged = /每日签到|签到得|新建任务|插件·技能|MiniMax\d{3,}|用户\d{3,}/.test(text);
     return { ok: !loginForm && logged, why: loginForm ? 'login-form' : logged ? 'user-ui' : 'unknown' };
   },
   zhipu: async (page, ctx) => {
@@ -110,6 +110,13 @@ async function main() {
       }
     }
 
+    // 超时前再确认一次（有些页面登录后会跳转，可能刚好错过检测）
+    const lastCheck = await detector(page, ctx).catch(() => ({ ok: false }));
+    if (lastCheck.ok) {
+      logger.info(`✅ ${adapter.name} 登录成功（超时前最终确认）`);
+      await ctx.close();
+      process.exit(0);
+    }
     logger.warn(`${MAX_MINUTES} 分钟内未检测到登录成功`);
     await ctx.close().catch(() => null);
     process.exit(2);

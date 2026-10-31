@@ -371,7 +371,8 @@ function computeAction(p) {
       action: () => window.open(p.downloadUrl, '_blank'),
     };
   }
-  if (p.needsLogin) {
+  const neverRan = !p.last; // 从没跑过 → 大概率没登录过
+  if (p.needsLogin || (p.kind === 'web' && neverRan)) {
     if (p.kind === 'client') {
       return {
         note: '客户端已安装，但还没登录：打开后扫码登录，再回来点「签到」',
@@ -446,7 +447,8 @@ function pollLogin(p) {
         toast(`${p.name} 登录成功`);
         await fetchState();
       } else if (s.status === 'timeout') {
-        toast('登录超时，可以再点一次「去登录」', true);
+        toast('登录没检测到成功：请确认是在弹出的窗口里扫码，可以再点一次「去登录」', true);
+        await fetchState();
       } else if (s.status === 'client') {
         toast('这个平台需要在客户端里登录', true);
       } else if (s.status === 'error') {
