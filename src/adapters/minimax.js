@@ -1,6 +1,6 @@
 import { launchContext } from '../browser.js';
 import { defineAdapter } from './base.js';
-import { pageText, detectLogin, screenshot, dumpHTML, gotoSettled } from '../dom.js';
+import { pageText, screenshot, dumpHTML } from '../dom.js';
 import { sleep } from '../util.js';
 
 /**
@@ -82,6 +82,30 @@ async function clickAccountEntry(page, logger) {
   return false;
 }
 
+async function openAccountMenu(page, logger) {
+  try {
+    const pos = await page.evaluate(() => {
+      const h = window.innerHeight;
+      for (const el of document.querySelectorAll('div,button,[role="button"]')) {
+        const t = (el.textContent || '').trim();
+        if (!/^(MiniMax|用户)\S{0,16}$/.test(t)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 40 || r.height < 18) continue;
+        if (r.y < h * 0.8) continue; // 只认左下角
+        return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: t };
+      }
+      return null;
+    });
+    if (!pos) return false;
+    await page.mouse.click(pos.x, pos.y);
+    logger?.step(`点开账户菜单（${pos.text}）`);
+    await sleep(1500);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function runMinimax({ logger, cfg, shotDir, shotName, dryRun }) {
   const ctx = await launchContext(cfg, { headless: true, logger });
   const page = await ctx.newPage();
@@ -91,64 +115,68 @@ async function runMinimax({ logger, cfg, shotDir, shotName, dryRun }) {
     await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => null);
     await sleep(3000);
 
+    // 登录判断：只看登录弹窗/表单特征（页面其它地方可能本来就有"登录"字样）
     let text = await pageText(page);
-    if (await detectLogin(page, text)) {
+    const loginWall = /微信扫码登录|获取验证码|请输入您的手机号/.test(text);
+    if (loginWall) {
       await screenshot(page, shotDir, `${shotName}-login`).catch(() => null);
-      return { status: 'needs_login', detail: 'MiniMax Code 未登录，运行 npm run login 扫码登录一次' };
+      return { status: 'needs_login', detail: 'MiniMax Code 未登录，运行 npm run login:minimax 扫码登录一次' };
     }
 
-    // 打开账户菜单（签到入口在里面）
-    const opened = await clickAccountEntry(page, logger);
-    if (!opened) logger?.warn('没找到账户入口，直接在页面里找签到');
-    await sleep(1500);
-    text = await pageText(page);
-
-    const doneHit = DONE_TEXTS.find((k) => text.includes(k));
-    if (doneHit && !text.includes('签到得')) {
-      await screenshot(page, shotDir, shotName).catch(() => null);
-      return { status: 'already', detail: `页面显示「${doneHit}」，今天已完成` };
+    // 签到面板只在"今天还没签"时出现在首页左下角；签过之后就没有了。
+    // 所以三步走：①等面板；②没有面板就点账户菜单→每日签到，看弹窗状态；③两者都没有才判 not_found
+    let hasPanel = false;
+    for (let i = 0; i < 8; i++) {
+      text = await pageText(page);
+      if (text.includes('签到得')) {
+        hasPanel = true;
+        break;
+      }
+      if (DONE_TEXTS.some((k) => text.includes(k))) break;
+      await sleep(1500);
     }
 
-    // 找「每日签到」菜单项
-    const foundEntry = await clickFirstVisibleText(page, SIGNIN_ENTRY_TEXTS, { logger });
-    if (!foundEntry) {
-      await dumpHTML(page, shotDir, `${shotName}-nofound`).catch(() => null);
-      await screenshot(page, shotDir, `${shotName}-nofound`).catch(() => null);
-      return { status: 'not_found', detail: '没找到「每日签到」入口（界面可能改版，用 npm run probe -- --only=minimax 看实际文案）' };
-    }
-    await sleep(2000);
-    text = await pageText(page);
+    if (!hasPanel) {
+      // 从账户菜单进「每日签到」弹窗，确认是否已签
+      logger?.step('首页没有签到面板，改从账户菜单进入');
+      const openedMenu = await openAccountMenu(page, logger);
+      if (openedMenu) {
+        await clickFirstVisibleText(page, ['每日签到'], { logger });
+        await sleep(2500);
+      }
+      text = await pageText(page);
 
-    const doneNow = DONE_TEXTS.find((k) => text.includes(k));
-    if (doneNow) {
-      await screenshot(page, shotDir, shotName).catch(() => null);
-      return { status: 'already', detail: `签到面板显示「${doneNow}」，今天已完成` };
+      const doneInDialog = DONE_TEXTS.find((k) => text.includes(k));
+      if (doneInDialog) {
+        await screenshot(page, shotDir, shotName).catch(() => null);
+        return { status: 'already', detail: `签到弹窗显示「${doneInDialog}」，今天已完成` };
+      }
+      if (!text.includes('签到得')) {
+        await dumpHTML(page, shotDir, `${shotName}-nofound`).catch(() => null);
+        await screenshot(page, shotDir, `${shotName}-nofound`).catch(() => null);
+        return { status: 'not_found', detail: '没找到「每日签到」入口（界面可能改版，用 npm run probe -- --only=minimax 看实际文案）' };
+      }
     }
 
     if (dryRun) {
       await screenshot(page, shotDir, `${shotName}-dryrun`).catch(() => null);
-      return { status: 'dry_run', detail: '演练模式：已找到签到入口，未点击' };
+      return { status: 'dry_run', detail: '演练模式：已找到「每日签到」入口，未点击' };
     }
 
-    // 点签到按钮：优先匹配「签到得 N 积分」这种可点元素
+    // 点签到按钮（按钮文案形如「签到得 400」）
     let claimed = false;
     try {
       const btn = page.getByRole('button', { name: CLAIM_BUTTON_PATTERN }).first();
-      if (await btn.isVisible({ timeout: 1500 })) {
-        await btn.click({ timeout: 5000 });
+      if (await btn.isVisible({ timeout: 2000 })) {
+        await btn.click({ timeout: 6000 });
         claimed = true;
-        logger?.step('已点击「签到」按钮');
+        logger?.step('已点击「签到得 N」按钮');
       }
     } catch {
-      /* 退回到文本匹配 */
+      /* 退回文本匹配 */
     }
     if (!claimed) {
-      for (const t of ['签到得', '立即签到', '签到']) {
-        if (await clickFirstVisibleText(page, [t], { logger })) {
-          claimed = true;
-          break;
-        }
-      }
+      claimed = await clickFirstVisibleText(page, ['签到得'], { logger });
     }
 
     await sleep(2500);
@@ -163,9 +191,11 @@ async function runMinimax({ logger, cfg, shotDir, shotName, dryRun }) {
     })();
 
     if (success || doneAfter) {
+      // 区分「本次点击成功」与「本来就已经签过」
+      const ok = Boolean(success) || claimed;
       return {
-        status: success ? 'success' : 'already',
-        detail: points ? `签到成功，+${points} 积分` : success ? '签到成功' : `页面显示「${doneAfter}」`,
+        status: ok ? 'success' : 'already',
+        detail: points ? `签到成功，+${points} 积分` : ok ? '签到成功（页面已显示今日已签到）' : `页面显示「${doneAfter}」`,
         meta: points ? { todayPoints: points } : undefined,
       };
     }
