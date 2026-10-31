@@ -121,16 +121,25 @@ Windows：安装脚本创建的计划任务已带上 **「唤醒计算机运行�
 
 ## 交给 AI Agent 安装（复制这段）
 
+把下面整段粘给 WorkBuddy / Claude Code / Cursor / DSH 等能执行命令的 Agent：
+
 ```
-帮我在这台电脑上安装 https://github.com/BorisSun0424-boop/zaoba
-先读仓库里的 docs/AGENT-PROMPT.md，按里面的步骤做：
-1. 检查系统（macOS / Windows）和 Node ≥18
-2. 缺 Node 就装（Windows 用 winget，mac 用 brew 或官方 pkg）
-3. 安装依赖与浏览器内核
-4. 跑 bash scripts/bootstrap.sh --check（Windows：bootstrap.ps1 -Check）
-5. 装完跑 npm run dry-run，把结果汇报给我
-不要动电脑上的其它软件，不要 sudo 装系统服务，需要权限先问我。
+帮我在这台电脑上安装这个开源工具：
+https://github.com/BorisSun0424-boop/zaoba
+
+要求：
+1. 先读仓库里的 docs/AGENT-PROMPT.md，严格按里面的安全约束执行
+2. 装到 ~/Desktop/zaoba 目录（Windows 用 %USERPROFILE%\Desktop\zaoba）
+3. 如果 GitHub 连不上（国内常见，30 秒没动静就算失败），改用镜像：
+   git clone https://gh-proxy.com/https://github.com/BorisSun0424-boop/zaoba.git ~/Desktop/zaoba
+4. 先跑 bash scripts/bootstrap.sh --check（Windows: powershell -File scripts\bootstrap.ps1 -Check）
+   再跑 bash scripts/bootstrap.sh（Windows 去掉 -Check）
+5. 不要安装定时任务（先不要跑 install-launchd.sh / install-service.ps1）
+6. 装完启动控制台 node src/index.js web，告诉我访问地址
+7. 最后汇报：Node 版本、有没有下载浏览器内核、自检结果、控制台地址
 ```
+
+更完整的 Agent 版步骤（含权限约束、登录引导、失败处理）见 [docs/AGENT-PROMPT.md](./docs/AGENT-PROMPT.md)。
 
 注意：Agent 只能装好程序，**扫码登录还得你本人做**。
 
