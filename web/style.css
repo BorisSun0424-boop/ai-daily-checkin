@@ -501,3 +501,26 @@ main {
 @media (max-width: 620px) {
   .setup-chip { max-width: 150px; font-size: 10px; }
 }
+
+/* ---------------- advanced (collapsed) panel ---------------- */
+.advanced { padding-bottom: 4px; align-self: start; }
+.advanced > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary::before {
+  content: "▸";
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-right: 6px;
+  transition: transform 0.15s;
+}
+.advanced[open] > summary::before { content: "▾"; }
+.advanced > summary h2 { margin: 0; }
+.advanced .clients { padding: 0 16px 14px; }

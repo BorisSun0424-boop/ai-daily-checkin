@@ -58,13 +58,16 @@
           <pre class="log" id="log"><span class="muted">等待运行… 点击「全部签到」或单个平台的「签到」开始</span></pre>
         </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h2>可接管客户端</h2>
+        <details class="panel advanced">
+          <summary class="panel-head">
+            <h2>高级：可接管客户端 <span class="muted" style="font-weight:400">（加新平台时用，日常可忽略）</span></h2>
             <button class="btn tiny" id="btnScanClients">重新扫描</button>
-          </div>
+          </summary>
+          <p class="hint" style="padding:0 16px 8px">
+            这里列的是本机装了、且支持 CDP 调试端口的桌面应用。带「已配置」的才是签到平台真正用到的，其余只是探测信息。
+          </p>
           <div id="clients" class="clients"><span class="muted">扫描中…</span></div>
-        </section>
+        </details>
       </div>
     </main>
 

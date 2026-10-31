@@ -449,7 +449,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     toast('读取状态失败：' + e.message, true);
   }
   connectEvents();
-  loadClients();
+  // 客户端扫描只在展开「高级」面板时才跑，避免无意义的开机扫描
+  const adv = document.querySelector('details.advanced');
+  if (adv) adv.addEventListener('toggle', () => { if (adv.open) loadClients(); });
   loadSchedule();
 
   document.querySelectorAll('#filterSeg .seg-btn').forEach((b) =>
