@@ -8,7 +8,8 @@
 param(
   [switch]$Check,
   [switch]$WithService,
-  [switch]$SkipBrowser
+  [switch]$SkipBrowser,
+  [switch]$ForceBrowser
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,9 +46,37 @@ if (Test-Path 'node_modules\playwright') { Ok "依赖已安装" }
 elseif ($Check) { Fail "缺少 node_modules，需要执行 npm install" }
 else { npm install --no-audit --no-fund; Ok "依赖安装完成" }
 
-Step 4 "Playwright Chromium（约 570MB）"
+Step 4 "浏览器内核（首次约 570MB，可复用系统浏览器省掉）"
 $cache = Join-Path $env:LOCALAPPDATA 'ms-playwright'
-if ((Test-Path $cache) -and ((Get-ChildItem $cache -Force | Measure-Object).Count -gt 0)) {
+
+# 全新安装时优先复用系统 Edge / Chrome（Windows 自带 Edge）
+$systemChannel = ''
+$freshInstall = -not (Test-Path 'profile')
+if ($freshInstall -and -not $ForceBrowser) {
+  $edgePaths = @(
+    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe')
+  )
+  $chromePaths = @(
+    (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe')
+  )
+  if ($edgePaths | Where-Object { $_ -and (Test-Path $_) }) { $systemChannel = 'msedge' }
+  elseif ($chromePaths | Where-Object { $_ -and (Test-Path $_) }) { $systemChannel = 'chrome' }
+}
+
+if ($systemChannel) {
+  if ($Check) {
+    Ok "检测到系统浏览器，可复用它（channel: $systemChannel），无需下载 570MB"
+  } else {
+    if (-not (Test-Path 'config.json')) { node src/index.js list | Out-Null }
+    $cfg = Get-Content 'config.json' -Raw | ConvertFrom-Json
+    $cfg | Add-Member -NotePropertyName channel -NotePropertyValue $systemChannel -Force
+    $cfg | ConvertTo-Json -Depth 20 | Set-Content 'config.json' -Encoding UTF8
+    Ok "已设为复用系统浏览器（channel: $systemChannel），跳过 570MB 下载"
+    Warn "注意：切换浏览器内核会让已有登录态失效（首次安装没有这问题）"
+  }
+} elseif ((Test-Path $cache) -and ((Get-ChildItem $cache -Force | Measure-Object).Count -gt 0)) {
   Ok "浏览器内核已存在"
 } elseif ($SkipBrowser) {
   Warn "已跳过下载（网页类平台不可用；客户端类平台不受影响）"

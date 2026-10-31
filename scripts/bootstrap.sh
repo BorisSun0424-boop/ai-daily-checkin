@@ -120,9 +120,35 @@ else
 fi
 
 # ---------------------------------------------------------------- 4. 浏览器内核
-step 4 "Playwright Chromium（约 570MB）"
+step 4 "浏览器内核（首次约 570MB，可复用系统浏览器省掉）"
 BROWSER_CACHE="${HOME}/Library/Caches/ms-playwright"
-if [ -d "$BROWSER_CACHE" ] && [ -n "$(ls -A "$BROWSER_CACHE" 2>/dev/null)" ]; then
+
+# 全新安装（还没有 profile/）时，优先复用系统 Chrome / Edge，省 570MB
+SYSTEM_CHANNEL=""
+if [ "${FORCE_BROWSER:-0}" != "1" ] && [ ! -d "$PROJECT_DIR/profile" ]; then
+  if [ -d "/Applications/Google Chrome.app" ]; then
+    SYSTEM_CHANNEL="chrome"
+  elif [ -d "/Applications/Microsoft Edge.app" ]; then
+    SYSTEM_CHANNEL="msedge"
+  fi
+fi
+
+if [ -n "${SYSTEM_CHANNEL}" ]; then
+  if [ "$CHECK_ONLY" = 1 ]; then
+    ok "检测到系统浏览器，可复用它（channel: ${SYSTEM_CHANNEL}），无需下载 570MB"
+  else
+    ( cd "$PROJECT_DIR" && [ -f config.json ] || node src/index.js list >/dev/null 2>&1 )
+    node -e '
+      const fs = require("fs");
+      const f = "config.json";
+      const c = JSON.parse(fs.readFileSync(f, "utf8"));
+      c.channel = process.argv[1];
+      fs.writeFileSync(f, JSON.stringify(c, null, 2) + "\n");
+    ' "${SYSTEM_CHANNEL}"
+    ok "已设为复用系统浏览器（channel: ${SYSTEM_CHANNEL}），跳过 570MB 下载"
+    warn "注意：切换浏览器内核会让已有登录态失效（首次安装没有这问题）"
+  fi
+elif [ -d "$BROWSER_CACHE" ] && [ -n "$(ls -A "$BROWSER_CACHE" 2>/dev/null)" ]; then
   ok "浏览器内核已存在（$(du -sh "$BROWSER_CACHE" 2>/dev/null | cut -f1)）"
 elif [ "$SKIP_BROWSER" = 1 ]; then
   warn "已跳过下载（网页类平台将不可用；客户端类平台不受影响）"
