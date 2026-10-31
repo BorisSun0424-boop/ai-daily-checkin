@@ -171,6 +171,7 @@ export function buildState() {
     };
   });
 
+  const loginRunning = loginState.status === 'running';
   const enabled = platforms.filter((p) => p.enabled);
   const doneToday = enabled.filter((p) => RUN_STATUS.has(p.todayStatus));
 
@@ -183,6 +184,8 @@ export function buildState() {
   }
 
   return {
+    loginRunning,
+    loginPlatform: loginState.id,
     now: new Date().toISOString(),
     today: today(),
     schedule: { time: cfg.schedule?.time || '08:30', randomDelayMinutes: cfg.schedule?.randomDelayMinutes ?? 25 },
@@ -354,6 +357,21 @@ export async function startServer({ port = 7788, logger } = {}) {
         } catch (e) {
           return json(res, 500, { error: String(e.message).split('\n')[0] });
         }
+      }
+
+      if (p === '/api/login/cancel' && req.method === 'POST') {
+        if (loginState.proc) {
+          try {
+            loginState.proc.kill();
+          } catch {
+            /* ignore */
+          }
+        }
+        loginState.proc = null;
+        loginState.status = 'idle';
+        loginState.code = null;
+        broadcast({ type: 'state' });
+        return json(res, 200, { ok: true });
       }
 
       if (p === '/api/login/status' && req.method === 'GET') {

@@ -79,6 +79,17 @@ async function main() {
   const page = await ctx.newPage();
   logger.info(`打开 ${adapter.name} 登录页: ${url}`);
 
+  // 用户手动关掉窗口时，立刻退出（否则会一直显示"登录窗口已打开"）
+  let closedByUser = false;
+  const onClose = (who) => {
+    if (closedByUser) return;
+    closedByUser = true;
+    logger.warn(`登录窗口已关闭（${who}），结束本次登录`);
+    setTimeout(() => process.exit(2), 300);
+  };
+  page.on('close', () => onClose('page'));
+  ctx.on('close', () => onClose('context'));
+
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForTimeout(2500);
@@ -103,6 +114,11 @@ async function main() {
     let lastWhy = '';
     while (Date.now() < deadline) {
       await sleep(2500);
+      if (closedByUser || page.isClosed()) {
+        logger.warn('登录窗口已被关闭，结束本次登录');
+        await ctx.close().catch(() => null);
+        process.exit(2);
+      }
       const r = await detector(page, ctx).catch(() => ({ ok: false, why: 'err' }));
       if (r.ok) {
         await sleep(1500); // 让 cookie 落盘

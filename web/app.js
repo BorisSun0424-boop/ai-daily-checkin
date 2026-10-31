@@ -361,6 +361,14 @@ function connectEvents() {
  */
 function computeAction(p) {
   if (!p.enabled || running) return null;
+  // 正在等登录：给「取消登录」，避免窗口关了以后一直卡在“登录窗口已打开”
+  if (state?.loginRunning && state.loginPlatform === p.id) {
+    return {
+      note: '登录窗口已打开：如果窗口被你关掉了，点「取消登录」再重新点一次登录',
+      label: '取消登录',
+      action: () => cancelLogin(p),
+    };
+  }
   if (p.unsupported) {
     return { note: '这个平台没有可自动领取的入口，启用也不会执行', label: '' };
   }
@@ -396,6 +404,19 @@ function computeAction(p) {
     };
   }
   return null;
+}
+
+/* ---------------- 取消登录 ---------------- */
+
+async function cancelLogin(p) {
+  try {
+    await fetch('/api/login/cancel', { method: 'POST' });
+    clearInterval(loginPoll);
+    toast('已取消登录');
+    await fetchState();
+  } catch (e) {
+    toast(e.message, true);
+  }
 }
 
 /* ---------------- 打开客户端 ---------------- */
