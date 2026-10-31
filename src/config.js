@@ -38,11 +38,17 @@ const CLIENT_PLATFORM_DEFAULTS = {
     name: 'Trae CN',
     app: platform.knownAppPaths.trae[0],
     appCandidates: platform.knownAppPaths.trae,
-    port: 9222,
+    port: 9223, // 9222 常被其它 Chromium 应用占用，默认换 9223
     cdpMode: 'arg',
-    clickSelectors: ['[class*="accountCheckinButton"]', '[class*="accountCheckin"]', '[class*="checkin"]'],
-    keywords: ['签到', '领取', '立即签到'],
-    doneKeywords: ['今日已签到', '已签到', '明天再来'],
+    autoRestart: true,
+    quitAppName: 'Trae CN',
+    // 签到入口在"账户菜单"里，必须先点开账户按钮
+    pageUrlMatch: 'vscode-app', // 主界面是 workbench，另有悬浮按钮等页面
+    // 账户菜单是切换式的：这些文案出现说明菜单已打开，不要再点
+    menuOpenTexts: ['每日领 100 积分', '邀请好友得积分', '已签到'],
+    beforeClickSelectors: ['[class*="accountTrigger"]', 'button[class*="accountTrigger"]', '[class*="account-trigger"]'],
+    keywords: ['签到', '立即签到'],
+    doneKeywords: ['已签到', '今日已签到', '明日再来', '今日已领'],
     notes:
       '需先安装 Trae 国内版并登录（国际版 trae.ai 没有签到）。入口：左下角头像→签到。走 CDP 点真客户端，绕开设备绑定（网页 token 去签会返回 9074）',
   },

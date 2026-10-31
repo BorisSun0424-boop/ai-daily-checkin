@@ -10,8 +10,8 @@
   "screenshotKeepDays": 7,
   "schedule": {
     "time": "08:00",
-    "randomDelayMinutes": 5,
-    "retryTime": "12:30"
+    "retryTime": "12:30",
+    "randomDelayMinutes": 5
   },
   "notify": {
     "macos": true,
@@ -24,6 +24,9 @@
       "type": "client",
       "name": "豆包",
       "app": "/Applications/Doubao.app",
+      "appCandidates": [
+        "/Applications/Doubao.app"
+      ],
       "port": 9445,
       "cdpMode": "arg",
       "pageUrlMatch": "doubao-chat",
@@ -45,30 +48,49 @@
       "type": "client",
       "name": "Trae CN",
       "app": "/Applications/Trae CN.app",
-      "port": 9222,
+      "appCandidates": [
+        "/Applications/Trae CN.app"
+      ],
+      "port": 9223,
       "cdpMode": "arg",
+      "autoRestart": true,
+      "quitAppName": "Trae CN",
+      "pageUrlMatch": "vscode-app",
+      "menuOpenTexts": [
+        "每日领 100 积分",
+        "邀请好友得积分",
+        "已签到"
+      ],
+      "beforeClickSelectors": [
+        "[class*=\"accountTrigger\"]",
+        "button[class*=\"accountTrigger\"]",
+        "[class*=\"account-trigger\"]"
+      ],
+      "keywords": [
+        "签到",
+        "立即签到"
+      ],
+      "doneKeywords": [
+        "已签到",
+        "今日已签到",
+        "明日再来",
+        "今日已领"
+      ],
+      "notes": "需先安装 Trae 国内版并登录（国际版 trae.ai 没有签到）。入口：左下角头像→签到。走 CDP 点真客户端，绕开设备绑定（网页 token 去签会返回 9074）",
       "clickSelectors": [
         "[class*=\"accountCheckinButton\"]",
         "[class*=\"accountCheckin\"]",
         "[class*=\"checkin\"]"
-      ],
-      "keywords": [
-        "签到",
-        "领取",
-        "立即签到"
-      ],
-      "doneKeywords": [
-        "今日已签到",
-        "已签到",
-        "明天再来"
-      ],
-      "notes": "需先安装 Trae 国内版并登录（国际版 trae.ai 没有签到）。入口：左下角头像→签到。走 CDP 点真客户端，绕开设备绑定（网页 token 去签会返回 9074）"
+      ]
     },
     "qoder-cn": {
-      "enabled": true,
+      "enabled": false,
       "type": "client",
       "name": "Qoder CN",
       "app": "/Applications/Qoder.app",
+      "appCandidates": [
+        "/Applications/Qoder.app"
+      ],
       "port": 9223,
       "cdpMode": "arg",
       "clickSelectors": [
@@ -94,6 +116,9 @@
       "type": "client",
       "name": "豆包工作",
       "app": "/Applications/DoubaoWork.app",
+      "appCandidates": [
+        "/Applications/DoubaoWork.app"
+      ],
       "port": 9444,
       "cdpMode": "arg",
       "openUrl": "https://www.doubao.com/pc/agent-explore",
@@ -132,7 +157,7 @@
       ]
     },
     "wanxiang": {
-      "enabled": true,
+      "enabled": false,
       "entryUrls": [
         "https://wanxiang.aliyun.com/"
       ],
@@ -148,7 +173,7 @@
       ]
     },
     "kimi": {
-      "enabled": true,
+      "enabled": false,
       "entryUrls": [
         "https://www.kimi.com/"
       ],
@@ -161,7 +186,7 @@
       "doneKeywords": []
     },
     "wenxin": {
-      "enabled": true,
+      "enabled": false,
       "entryUrls": [
         "https://wenxin.baidu.com/"
       ],
@@ -173,7 +198,7 @@
       "doneKeywords": []
     },
     "yuanbao": {
-      "enabled": true,
+      "enabled": false,
       "entryUrls": [
         "https://yuanbao.tencent.com/chat/"
       ],
@@ -191,7 +216,7 @@
       ]
     },
     "doubao": {
-      "enabled": true,
+      "enabled": false,
       "entryUrls": [
         "https://www.doubao.com/chat/",
         "https://www.doubao.com/work"

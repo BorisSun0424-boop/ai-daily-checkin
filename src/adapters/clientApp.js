@@ -155,10 +155,38 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
     if (pc.openUrl) {
       page = await browser.contexts()[0].newPage();
       await page.goto(pc.openUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
-      await sleep(1500);
+      // 任务/活动面板是异步渲染的，尽量等它稳定
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => null);
+      await sleep(2500);
     } else {
       page = (pc.pageUrlMatch && pages.find((p) => p.url().includes(pc.pageUrlMatch))) || pages[0];
       if (!page) return { status: 'error', detail: '没找到可操作的页面' };
+    }
+
+    // 3.5) 有些客户端的签到入口藏在账户菜单里，先点开再判断状态
+    //      注意：部分客户端是"切换式"菜单，已打开时再点会关掉 → 先用 menuOpenTexts 判断
+    const menuOpenTexts = pc.menuOpenTexts || [];
+    let menuAlreadyOpen = false;
+    if (menuOpenTexts.length) {
+      const cur = await pageText(page);
+      menuAlreadyOpen = menuOpenTexts.some((t) => cur.includes(t));
+      if (menuAlreadyOpen) logger?.step('前置菜单已是打开状态，跳过点击');
+    }
+
+    if (Array.isArray(pc.beforeClickSelectors) && pc.beforeClickSelectors.length && !menuAlreadyOpen) {
+      for (const sel of pc.beforeClickSelectors) {
+        try {
+          const loc = page.locator(sel).first();
+          if (await loc.isVisible({ timeout: 1500 })) {
+            logger?.step(`打开前置菜单: ${sel}`);
+            await loc.click({ timeout: 4000 });
+            await sleep(1500);
+            break;
+          }
+        } catch {
+          /* 换下一个选择器 */
+        }
+      }
     }
 
     // 4) 幂等：先看是不是今天已经签过
@@ -240,7 +268,12 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
     const login = await detectLogin(page, text);
     if (login.needLogin) return { status: 'needs_login', detail: login.reason };
 
-    const res = await clickByKeywords(page, pc.keywords || ['签到', '领取'], logger, { label: pc.name || 'client' });
+    let res = await clickByKeywords(page, pc.keywords || ['签到', '领取'], logger, { label: pc.name || 'client' });
+    if (!res.clicked) {
+      logger?.step('首次未找到入口，等待 3 秒后重试（异步内容可能晚到）');
+      await sleep(3000);
+      res = await clickByKeywords(page, pc.keywords || ['签到', '领取'], logger, { label: pc.name || 'client' });
+    }
     const out = res.outcome || {};
     if (out.already) return { status: 'already', detail: `点击后提示已完成（${res.text}）` };
     if (out.success) return { status: 'success', detail: `点击「${res.text}」后出现成功提示` };

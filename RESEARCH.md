@@ -333,3 +333,41 @@ node src/index.js run --only=workbuddy
 
 - 已手动确认：点击「立即签到」后按钮消失、页面出现「已领取」，+200 额度到账
 - 适配器三种场景全部验证通过：客户端在跑（有端口）直接接管 / 没跑自动启动后退出 / 在跑但无端口自动重启接管并保留运行
+
+
+---
+
+## 13. Trae CN 打通的四个坑（2026-10-31 实测）
+
+之前 Trae 一直签到失败，原因不是接口或模型问题，而是**四层工程问题叠加**：
+
+| # | 现象 | 真实原因 | 修复 |
+| --- | --- | --- | --- |
+| 1 | `error · 调试端口 9222 没响应` | **9222 被别的进程占用**（本机是 Microsoft 的一个后台进程） | 端口改 9223，并在配置里写明"9222 常被占用" |
+| 2 | `not_found · 找不到签到按钮` | 适配器选中了**悬浮按钮页**（Trae 有 3 个 CDP page） | 配置 `pageUrlMatch: "vscode-app"` 锁定 workbench 主界面 |
+| 3 | 菜单里有「签到」但脚本找不到 | 签到入口藏在**账户菜单**里，必须先点账户按钮 | 新增 `beforeClickSelectors`，先点 `[class*="accountTrigger"]` 再判断/点击 |
+| 4 | 客户端启动 0.3 秒后自动退出 | `~/Library/Caches/Trae CN/pending/` 里有**未完成的更新包**，启动即尝试应用然后退出 | 移走 pending 目录（备份，不删）后恢复正常 |
+
+### 实测结果
+
+- 签到前额度 **4,500**，点击后 **4,600**，菜单项由「签到」变为「已签到」，提示"本账号今日已签到，明日再来"
+- 免费版每日 **+100 积分**（升级会员后每日再多 100）
+- 适配器复跑返回 `already`，幂等正常
+
+### 配置要点
+
+```jsonc
+"trae-cn": {
+  "enabled": true,
+  "port": 9223,                          // 不要用 9222
+  "pageUrlMatch": "vscode-app",          // 锁主界面
+  "beforeClickSelectors": ["[class*=\"accountTrigger\"]"],
+  "keywords": ["签到", "立即签到"],
+  "doneKeywords": ["已签到", "今日已签到", "明日再来"],
+  "autoRestart": true,
+  "quitAppName": "Trae CN"
+}
+```
+
+> 注意：Trae 的签到是**账户菜单项**，不是页面按钮；如果以后菜单层级变了，
+> 用 `npm run clients -- --probe=Trae` 加上截图定位新的 trigger 选择器即可。
