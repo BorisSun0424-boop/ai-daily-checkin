@@ -30,9 +30,9 @@ Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
 
 不想用 git？直接下打包好的 zip（解压即用，含安装说明）：
 
-- **Windows**：[zaoba-v2.1.0-win.zip](https://github.com/BorisSun0424-boop/zaoba/releases/download/v2.1.0/zaoba-v2.1.0-win.zip)
-- **macOS**：[zaoba-v2.1.0-mac.zip](https://github.com/BorisSun0424-boop/zaoba/releases/download/v2.1.0/zaoba-v2.1.0-mac.zip)
-- 国内直连不稳时用镜像：`https://gh-proxy.com/https://github.com/BorisSun0424-boop/zaoba/releases/download/v2.1.0/zaoba-v2.1.0-win.zip`（mac 同理换文件名）
+- **Windows**：[zaoba-win.zip](https://github.com/BorisSun0424-boop/zaoba/releases/latest/download/zaoba-win.zip)
+- **macOS**：[zaoba-mac.zip](https://github.com/BorisSun0424-boop/zaoba/releases/latest/download/zaoba-mac.zip)
+- 国内直连不稳时用镜像：`https://gh-proxy.com/https://github.com/BorisSun0424-boop/zaoba/releases/latest/download/zaoba-win.zip`（mac 同理换文件名）
 
 ## 安装
 
