@@ -25,3 +25,9 @@ export { genericCheckin };
 export const adapters = [workbuddy, zhipu, minimax, wanxiang, kimi, wenxin, yuanbao, doubao];
 
 export const adapterById = new Map(adapters.map((a) => [a.id, a]));
+
+/** 已确认没有可自动化签到入口的平台：运行时直接跳过，不白开浏览器 */
+const UNSUPPORTED = new Set(['kimi', 'wenxin', 'yuanbao', 'wanxiang', 'doubao']);
+for (const a of adapters) {
+  if (UNSUPPORTED.has(a.id)) a.unsupported = true;
+}

@@ -52,6 +52,19 @@ export const knownAppPaths = {
   qoder: isMacOS ? ['/Applications/Qoder.app'] : [path.join(WIN_LOCAL, 'Programs', 'Qoder', 'Qoder.exe')],
 };
 
+/** 各客户端平台的官方下载页（用于「去下载」按钮） */
+export const downloadUrls = {
+  workbuddy: 'https://copilot.tencent.com/',
+  doubaowork: 'https://www.doubao.com/download/',
+  'doubaowork-client': 'https://www.doubao.com/download/',
+  trae: 'https://www.trae.cn/',
+  'trae-cn': 'https://www.trae.cn/',
+  qoder: 'https://qoder.com/',
+  'qoder-cn': 'https://qoder.com/',
+  doubao: 'https://www.doubao.com/download/',
+  'doubao-client': 'https://www.doubao.com/download/',
+};
+
 /* ------------------------------------------------------------------ *
  * 可执行文件解析
  * ------------------------------------------------------------------ */
@@ -420,5 +433,6 @@ export default {
   schedulerPath,
   platformNotes,
   knownAppPaths,
+  downloadUrls,
   buildWindowsTaskXml,
 };

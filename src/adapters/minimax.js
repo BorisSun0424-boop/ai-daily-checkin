@@ -1,4 +1,3 @@
-import { launchContext } from '../browser.js';
 import { defineAdapter } from './base.js';
 import { pageText, screenshot, dumpHTML } from '../dom.js';
 import { sleep } from '../util.js';
@@ -88,7 +87,7 @@ async function openAccountMenu(page, logger) {
       const h = window.innerHeight;
       for (const el of document.querySelectorAll('div,button,[role="button"]')) {
         const t = (el.textContent || '').trim();
-        if (!/^(MiniMax|用户)\S{0,16}$/.test(t)) continue;
+        if (!/^(MiniMax\d{3,}|用户\d{3,}|MiniMax|用户)$/.test(t)) continue;
         const r = el.getBoundingClientRect();
         if (r.width < 40 || r.height < 18) continue;
         if (r.y < h * 0.8) continue; // 只认左下角
@@ -106,9 +105,8 @@ async function openAccountMenu(page, logger) {
   }
 }
 
-async function runMinimax({ logger, cfg, shotDir, shotName, dryRun }) {
-  const ctx = await launchContext(cfg, { headless: true, logger });
-  const page = await ctx.newPage();
+async function runMinimax({ page, logger, cfg, shotDir, shotName, dryRun }) {
+  if (!page) throw new Error('MiniMax 适配器需要 runner 提供的页面');
   try {
     logger?.step(`打开 ${HOME}`);
     await page.goto(HOME, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -205,15 +203,15 @@ async function runMinimax({ logger, cfg, shotDir, shotName, dryRun }) {
     }
     return { status: 'uncertain', detail: '点了签到，但页面上没看到明确的成功/已签文案' };
   } finally {
+    // 不要关闭 runner 的浏览器上下文，只关自己这个标签页
     await page.close().catch(() => null);
-    await ctx.close().catch(() => null);
   }
 }
 
 export default defineAdapter({
   id: 'minimax',
   name: 'MiniMax Code',
-  standalone: true,
+  standalone: false, // 复用 runner 的浏览器（同一个 profile 不能被两个实例占用）
   enabledByDefault: false,
   homepage: HOME,
   loginUrl: HOME,

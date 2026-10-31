@@ -15,6 +15,7 @@ const STATUS = {
   not_installed: { label: '未安装', cls: 'idle' },
   offline: { label: '离线跳过', cls: 'idle' },
   dry_run: { label: '演练通过', cls: 'idle' },
+  unsupported: { label: '暂不支持', cls: 'idle' },
   disabled: { label: '未启用', cls: 'none' },
   none: { label: '今日未运行', cls: 'none' },
 };
@@ -180,19 +181,39 @@ function renderPlatforms() {
     foot.append(sw);
 
     const btns = el('div', 'head-actions');
-    if (p.needsLogin && p.enabled) {
-      const loginBtn = el('button', 'btn tiny primary', p.kind === 'web' ? '去登录' : '怎么登录');
-      loginBtn.title = p.kind === 'web'
-        ? '弹出登录窗口，扫码后自动保存登录态'
-        : '这个平台的登录在客户端里完成';
+    if (p.enabled && p.unsupported) {
+      // 没有可用签到入口，不给操作按钮
+    } else if (p.enabled && p.kind === 'client' && p.clientInstalled === false && p.downloadUrl) {
+      // 见下方分支
+      const dl = el('button', 'btn tiny primary', '去下载');
+      dl.title = '打开官方下载页，装好后回来点「签到」';
+      dl.addEventListener('click', () => window.open(p.downloadUrl, '_blank'));
+      btns.append(dl);
+    } else if (p.enabled && p.kind === 'client' && p.needsLogin) {
+      const open = el('button', 'btn tiny primary', '打开客户端');
+      open.title = '帮你打开客户端，在里面扫码登录后回来点「签到」';
+      open.addEventListener('click', () => openClient(p));
+      btns.append(open);
+    } else if (p.enabled && p.kind === 'web' && p.needsLogin) {
+      const loginBtn = el('button', 'btn tiny primary', '去登录');
+      loginBtn.title = '弹出登录窗口，扫码后自动保存登录态';
       loginBtn.addEventListener('click', () => beginLogin(p));
       btns.append(loginBtn);
     }
+    const FAILED_STATUS = ['not_found', 'error', 'timeout', 'needs_manual', 'uncertain'];
+    if (p.enabled && FAILED_STATUS.includes(p.todayStatus)) {
+      const retry = el('button', 'btn tiny', '重试');
+      retry.title = '重新跑一次这个平台';
+      retry.addEventListener('click', () => startRun([p.id], false));
+      btns.append(retry);
+    }
     const dry = el('button', 'btn tiny', '演练');
-    dry.disabled = running || !p.enabled;
+    dry.disabled = running || !p.enabled || p.unsupported;
+    dry.hidden = !!p.unsupported;
     dry.addEventListener('click', () => startRun([p.id], true));
     const go = el('button', 'btn tiny', '签到');
-    go.disabled = running || !p.enabled;
+    go.disabled = running || !p.enabled || p.unsupported;
+    go.hidden = !!p.unsupported;
     go.addEventListener('click', () => startRun([p.id], false));
     btns.append(dry, go);
     foot.append(btns);
@@ -311,6 +332,19 @@ function connectEvents() {
     // 服务重启后自动重连由 EventSource 负责；这里只提示一次
     appendLog('· 与服务的实时连接断开，正在重连…', 'warn');
   };
+}
+
+/* ---------------- 打开客户端 ---------------- */
+
+async function openClient(p) {
+  try {
+    const r = await fetch(`/api/open-app/${encodeURIComponent(p.id)}`, { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '打开失败');
+    toast(`已打开 ${p.name}，在里面扫码登录后回来点「签到」`);
+  } catch (e) {
+    toast(e.message, true);
+  }
 }
 
 /* ---------------- 去登录 ---------------- */

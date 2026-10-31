@@ -54,6 +54,9 @@ export function buildState() {
     byPlatform.get(r.id).push(r);
   }
 
+  // 已确认没有可自动化签到入口的平台（不要给用户"去登录"的误导提示）
+  const UNSUPPORTED = new Set(['kimi', 'wenxin', 'yuanbao', 'wanxiang', 'doubao', 'doubao-client']);
+
   // 客户端可执行文件候选路径（用于判断「客户端是否已安装」）
   const KNOWN_APPS = {
     workbuddy: platform.knownAppPaths.workbuddy,
@@ -89,14 +92,16 @@ export function buildState() {
     const cands = pc.appCandidates || (pc.app ? [pc.app] : KNOWN_APPS[a.id] || []);
     const clientInstalled = mode === 'client' ? cands.some((x) => x && fs.existsSync(x)) : null;
     const loginStatuses = [todayRec?.status, last?.status].filter(Boolean);
-    const needsLogin = loginStatuses.includes('needs_login');
-    const setupHint =
-      mode === 'client' && clientInstalled === false
+    const unsupported = UNSUPPORTED.has(a.id);
+    const needsLogin = !unsupported && loginStatuses.includes('needs_login');
+    const setupHint = unsupported
+      ? '该平台暂无可自动化的签到入口'
+      : mode === 'client' && clientInstalled === false
         ? '需先安装客户端'
         : needsLogin
           ? mode === 'client'
             ? '需在客户端里登录一次'
-            : '需登录一次：npm run login'
+            : '需登录一次：点底部「去登录」'
           : !last
             ? mode === 'client'
               ? '尚未运行（确认客户端已登录）'
@@ -108,6 +113,9 @@ export function buildState() {
       kind: mode,
       clientInstalled,
       needsLogin,
+      unsupported,
+      downloadUrl: mode === 'client' ? platform.downloadUrls[a.id] || '' : '',
+      appPath: mode === 'client' ? cands[0] || '' : '',
       setupHint,
       enabled: !!pc.enabled,
       notes: a.notes || '',
@@ -270,6 +278,28 @@ export async function startServer({ port = 7788, logger } = {}) {
           broadcast({ type: 'state' });
         });
         return json(res, 202, { ok: true, id });
+      }
+
+      if (p.startsWith('/api/open-app/') && req.method === 'POST') {
+        const id = decodeURIComponent(p.slice('/api/open-app/'.length));
+        const cfg = loadConfig();
+        const pc = cfg.platforms[id] || {};
+        const cands = pc.appCandidates || (pc.app ? [pc.app] : []);
+        const target = cands.find((x) => x && fs.existsSync(x));
+        if (!target) return json(res, 404, { error: '没找到这个平台的客户端，先点「去下载」安装' });
+        try {
+          if (platform.isMacOS) {
+            await execFile('open', [target], { timeout: 8000 });
+          } else if (platform.isWindows) {
+            const child = spawn(target, [], { detached: true, stdio: 'ignore', windowsHide: false });
+            child.unref();
+          } else {
+            return json(res, 400, { error: '当前系统暂不支持在此打开客户端' });
+          }
+          return json(res, 200, { ok: true });
+        } catch (e) {
+          return json(res, 500, { error: String(e.message).split('\n')[0] });
+        }
       }
 
       if (p === '/api/login/status' && req.method === 'GET') {

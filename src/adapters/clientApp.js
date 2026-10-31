@@ -163,6 +163,14 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
       if (!page) return { status: 'error', detail: '没找到可操作的页面' };
     }
 
+    // 3.4) 等界面真正渲染完（冷启动的 VS Code 系客户端常常还是空白）
+    let preText = await pageText(page).catch(() => '');
+    for (let i = 0; i < 14 && preText.length < 120; i++) {
+      logger?.step(`界面还没渲染完（${preText.length} 字符），等待…`);
+      await sleep(1500);
+      preText = await pageText(page).catch(() => '');
+    }
+
     // 3.5) 有些客户端的签到入口藏在账户菜单里，先点开再判断状态
     //      注意：部分客户端是"切换式"菜单，已打开时再点会关掉 → 先用 menuOpenTexts 判断
     const menuOpenTexts = pc.menuOpenTexts || [];
@@ -174,19 +182,25 @@ export async function runClientApp(pc, { logger, cfg, shotDir, shotName, dryRun 
     }
 
     if (Array.isArray(pc.beforeClickSelectors) && pc.beforeClickSelectors.length && !menuAlreadyOpen) {
-      for (const sel of pc.beforeClickSelectors) {
-        try {
-          const loc = page.locator(sel).first();
-          if (await loc.isVisible({ timeout: 1500 })) {
-            logger?.step(`打开前置菜单: ${sel}`);
-            await loc.click({ timeout: 4000 });
-            await sleep(1500);
-            break;
+      let clickedMenu = false;
+      for (let attempt = 0; attempt < 3 && !clickedMenu; attempt++) {
+        for (const sel of pc.beforeClickSelectors) {
+          try {
+            const loc = page.locator(sel).first();
+            if (await loc.isVisible({ timeout: 2000 })) {
+              logger?.step(`打开前置菜单: ${sel}`);
+              await loc.click({ timeout: 4000 });
+              await sleep(1800);
+              clickedMenu = true;
+              break;
+            }
+          } catch {
+            /* 换下一个选择器 */
           }
-        } catch {
-          /* 换下一个选择器 */
         }
+        if (!clickedMenu) await sleep(2500);
       }
+      if (!clickedMenu) logger?.warn('前置菜单没点开，继续尝试直接找关键词');
     }
 
     // 4) 幂等：先看是不是今天已经签过

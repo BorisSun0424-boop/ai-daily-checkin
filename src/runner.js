@@ -100,8 +100,11 @@ async function runOne(ctx, adapter, logger, cfg, opts) {
   let result;
 
   try {
-    // standalone：不依赖网页，直接在适配器内部自己搞定（比如接管本机客户端）
-    if (adapter.standalone && typeof adapter.custom === 'function') {
+    if (adapter.unsupported) {
+      // 直接标记跳过，但仍然走统一的记录/日志流程
+      result = { status: 'unsupported', detail: '该平台暂无可自动化的签到入口' };
+    } else if (adapter.standalone && typeof adapter.custom === 'function') {
+      // standalone：不依赖网页，直接在适配器内部自己搞定（比如接管本机客户端）
       const timeout = adapter.timeout || cfg.platformTimeout || 180000;
       result = await withTimeout(
         adapter.custom({ page: null, ctx: null, logger, cfg, shotDir, shotName: adapter.id, dryRun: !!opts.dryRun }),
@@ -110,10 +113,13 @@ async function runOne(ctx, adapter, logger, cfg, opts) {
       );
     } else {
       page = await ctx.newPage();
-      // 每个平台独立页面 + 独立超时，一个挂掉不影响其他
-      const work = opts.dryRun
-        ? dryRunOne(adapter, page, logger, cfg)
-        : genericCheckin(adapter, page, ctx, logger, cfg);
+      // 自定义网页适配器（复用 runner 的浏览器上下文，避免抢同一个 profile）
+      const work =
+        typeof adapter.custom === 'function'
+          ? adapter.custom({ page, ctx, logger, cfg, shotDir, shotName: adapter.id, dryRun: !!opts.dryRun })
+          : opts.dryRun
+            ? dryRunOne(adapter, page, logger, cfg)
+            : genericCheckin(adapter, page, ctx, logger, cfg);
       const timeout = adapter.timeout || cfg.platformTimeout || 120000;
       result = await withTimeout(work, timeout, adapter.name);
     }
