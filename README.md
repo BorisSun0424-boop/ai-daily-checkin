@@ -86,6 +86,27 @@ npm run web                          # ⑦ 打开控制台 → http://127.0.0.1:
 
 ---
 
+## 登录态存在哪（为什么不会反复登录）
+
+登录态 **不再放在安装目录里**，统一放在：
+
+```
+macOS / Linux:  ~/.zaoba/profile
+Windows:        %USERPROFILE%\.zaoba\profile
+```
+
+好处：**重新下载 zip、换目录、升级版本，登录态都不丢**（旧版本放在项目 `profile/` 里，换个目录就要重登，这是"总是要重新登录"的最主要原因）。
+
+一条命令自检：
+
+```bash
+npm run auth-check
+```
+
+它会告诉你：登录态目录在哪、各网页平台 cookie 还有几天、定时任务指向的是哪个目录、本机是否装了多份。
+
+> 注意：**智谱清言的会话本身较短**，如果页面显示未登录就是真的需要重扫；同一账号在手机/其它浏览器再登录一次，会踢掉电脑上的会话。
+
 ## 打开控制台（三种方式，任选）
 
 跑一次 `bash scripts/install-shortcuts.sh`（Windows 用 `scripts\install-shortcuts.ps1`）会自动装好前两种：

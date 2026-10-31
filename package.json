@@ -1,6 +1,6 @@
 {
   "name": "zaoba",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "private": true,
   "type": "module",
   "description": "早八 · 每天自动完成 AI 工具签到（WorkBuddy / 豆包工作 / 智谱），支持 macOS 与 Windows，带本地可视化控制台",
@@ -21,7 +21,8 @@
     "service:uninstall": "node src/index.js uninstall-service",
     "open": "node src/open-console.js",
     "login:minimax": "node src/minimax-login.js",
-    "setup": "node src/setup.js"
+    "setup": "node src/setup.js",
+    "auth-check": "node src/auth-check.js"
   },
   "dependencies": {
     "playwright": "^1.48.0"

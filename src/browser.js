@@ -11,8 +11,29 @@ import platform from './platform.js';
  * Cookie / localStorage / IndexedDB 全部落在 profile 目录里，
  * 下次 launch 直接复用，所以定时任务不需要再登录。
  */
+/**
+ * 旧版本把登录态放在「项目目录/profile」。现在统一放到 ~/.zaoba/profile，
+ * 这样重新下载 zip、换目录、换版本都不会丢登录态。
+ * 首次运行自动把旧目录迁移过去。
+ */
+function resolveProfileDir(cfg, logger) {
+  const target = cfg.profileDir || platform.defaultProfileDir();
+  const legacy = path.resolve('profile');
+  if (!fs.existsSync(target) && fs.existsSync(legacy)) {
+    try {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.renameSync(legacy, target);
+      logger?.info(`登录态已迁移到全局目录: ${target}（以后重新下载也不会丢）`);
+    } catch (e) {
+      logger?.warn(`登录态迁移失败，继续用旧目录: ${String(e.message).split('\n')[0]}`);
+      return legacy;
+    }
+  }
+  return target;
+}
+
 export async function launchContext(cfg, { headless, logger } = {}) {
-  const userDataDir = ensureDir(path.resolve(cfg.userDataDir));
+  const userDataDir = ensureDir(resolveProfileDir(cfg, logger));
   const wantHeadless = headless ?? cfg.headless;
 
   const opts = {

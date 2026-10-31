@@ -52,6 +52,11 @@ export const knownAppPaths = {
   qoder: isMacOS ? ['/Applications/Qoder.app'] : [path.join(WIN_LOCAL, 'Programs', 'Qoder', 'Qoder.exe')],
 };
 
+/** 登录态的全局存放位置：放在用户主目录，重新下载/换目录都不会丢 */
+export function defaultProfileDir() {
+  return process.env.ZAOBA_PROFILE || path.join(os.homedir(), '.zaoba', 'profile');
+}
+
 /** 各客户端平台的官方下载页（用于「去下载」按钮） */
 export const downloadUrls = {
   workbuddy: 'https://copilot.tencent.com/',
@@ -437,5 +442,6 @@ export default {
   platformNotes,
   knownAppPaths,
   downloadUrls,
+  defaultProfileDir,
   buildWindowsTaskXml,
 };
