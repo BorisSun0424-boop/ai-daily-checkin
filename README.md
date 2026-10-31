@@ -26,6 +26,14 @@ Playwright 持久化登录态 + launchd 定时，**装好后不用再管**。
 
 > 各平台积分**能留多久**（哪天清零）整理在 **[AI 积分活动与时效对照表](./docs/CREDITS.md)**（2026-10-31 核验）：扣子 1 天、Qoder 当日窗口、MiniMax 30 天、WorkBuddy 月底/活动截止清零。
 
+## 下载
+
+不想用 git？直接下打包好的 zip（解压即用，含安装说明）：
+
+- **Windows**：[zaoba-v2.1.0-win.zip](https://github.com/BorisSun0424-boop/zaoba/releases/download/v2.1.0/zaoba-v2.1.0-win.zip)
+- **macOS**：[zaoba-v2.1.0-mac.zip](https://github.com/BorisSun0424-boop/zaoba/releases/download/v2.1.0/zaoba-v2.1.0-mac.zip)
+- 国内直连不稳时用镜像：`https://gh-proxy.com/https://github.com/BorisSun0424-boop/zaoba/releases/download/v2.1.0/zaoba-v2.1.0-win.zip`（mac 同理换文件名）
+
 ## 安装
 
 > **第一次用？先看 [上手教程（从零到每天自动到账）](./docs/GETTING-STARTED.md)** —— 里面写了每个平台要不要装客户端、要不要登录、`dry-run` 每个状态怎么修。
