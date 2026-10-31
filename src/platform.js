@@ -326,9 +326,11 @@ export async function installScheduler({ label = 'com.local.ai-daily-checkin', p
 
   if (isWindows) {
     const created = [];
+    // 非默认 label 时用独立任务名，避免覆盖真实任务
+    const base = label === 'com.local.ai-daily-checkin' ? 'ZaobaDailyCheckin' : `ZaobaDailyCheckin-${label.replace(/[^a-z0-9]+/gi, '')}`;
     for (const [i, t] of valid.entries()) {
-      const taskName = i === 0 ? 'ZaobaDailyCheckin' : `ZaobaDailyCheckin${i + 1}`;
-      const xmlPath = path.join(os.tmpdir(), `zaoba-task-${i}.xml`);
+      const taskName = i === 0 ? base : `${base}${i + 1}`;
+      const xmlPath = path.join(os.tmpdir(), `zaoba-task-${label.replace(/[^a-z0-9]+/gi, '')}-${i}.xml`);
       const xmlText = buildWindowsTaskXml({ time: t, nodeBin: process.execPath, scriptPath });
       fs.writeFileSync(xmlPath, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xmlText, 'utf16le')]));
       await exec('schtasks', ['/Delete', '/TN', taskName, '/F'], { timeout: 15000 }).catch(() => null);
@@ -363,7 +365,8 @@ export async function removeScheduler({ label = 'com.local.ai-daily-checkin', lo
     return true;
   }
   if (isWindows) {
-    for (const name of ['ZaobaDailyCheckin', 'ZaobaDailyCheckin2', 'ZaobaDailyCheckin3']) {
+    const base = label === 'com.local.ai-daily-checkin' ? 'ZaobaDailyCheckin' : `ZaobaDailyCheckin-${label.replace(/[^a-z0-9]+/gi, '')}`;
+    for (const name of [base, `${base}2`, `${base}3`]) {
       await exec('schtasks', ['/Delete', '/TN', name, '/F'], { timeout: 15000 }).catch(() => null);
     }
     logger?.info('已删除 Windows 计划任务');

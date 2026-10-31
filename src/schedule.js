@@ -5,7 +5,8 @@ import platform from './platform.js';
 
 const PROJECT_DIR = process.cwd();
 
-export const LABEL = 'com.local.ai-daily-checkin';
+// 默认标签；设 ZAOBA_LABEL 可以装一份独立的定时任务（演示、多实例共存）
+export const LABEL = process.env.ZAOBA_LABEL || 'com.local.ai-daily-checkin';
 
 /** 校验并规范化 HH:MM（允许 8:5 这种写法，统一补零） */
 export function normalizeTime(input) {
