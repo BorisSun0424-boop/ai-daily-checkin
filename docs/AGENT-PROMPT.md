@@ -1,6 +1,6 @@
 # 交给 AI Agent 的安装指令（早八）
 
-把下面整段复制给你常用的 AI Agent（Claude Code / Cursor / DeepSeek Harness / WorkBuddy / Codex 等）即可，它会在你的 Mac 上完成安装、登录引导和验证。
+把下面整段复制给你常用的 AI Agent（Claude Code / Cursor / DeepSeek Harness / WorkBuddy / Codex 等）即可，它会在你的 Mac **或 Windows** 上完成安装、登录引导和验证。
 
 > 适用：你不想碰终端，希望 Agent 帮你把环境装好。
 > 前提：你愿意在过程中亲自完成各平台的扫码登录（Agent 无法代替你登录）。
@@ -10,7 +10,7 @@
 ## 复制以下内容给 Agent
 
 ```
-你是一名 macOS 环境搭建助手。请在本机安装并配置「AI 签到工具」（一个每天自动完成各 AI 工具签到的本地程序）。
+你是一名本机环境搭建助手（macOS 或 Windows 都可能）。请在本机安装并配置「AI 签到工具」（一个每天自动完成各 AI 工具签到的本地程序）。
 
 ## 目标
 让工具能每天自动运行，并提供本地控制台；不要求我现在就登录所有平台，但要把安装和登录引导做完。
@@ -46,17 +46,24 @@
 - 否则执行：
     git clone https://github.com/BorisSun0424-boop/zaoba.git
     cd zaoba
-    # 如果 clone 慢或失败（国内网络常见），改用镜像：
-    # git clone https://ghfast.top/https://github.com/BorisSun0424-boop/zaoba.git zaoba
-  （仓库是私有的，如果 clone 失败请告诉我需要授权，不要反复重试）
+  - 如果 clone 失败或很慢（国内网络常见，等 30 秒没动静就判定失败），改用镜像：
+    git clone https://gh-proxy.com/https://github.com/BorisSun0424-boop/zaoba.git zaoba
+  - 如果 git 不可用，直接下载 zip（同样支持镜像）：
+    https://github.com/BorisSun0424-boop/zaoba/releases/latest 里的 zaoba-*-mac.zip 或 -win.zip
+  - 建议装到桌面下一个固定目录（例如 ~/Desktop/zaoba），先问我确认路径
 
 ### 步骤 4：安装依赖与浏览器内核
-- 先跑自检：bash scripts/bootstrap.sh --check
-- 然后按提示执行：bash scripts/bootstrap.sh
-  （它会装 npm 依赖、下载约 570MB 的 Playwright Chromium、生成 config.json）
-- 如果这一步失败，把关键报错贴给我，不要自己反复重装
+- 先跑自检：`bash scripts/bootstrap.sh --check`（Windows：`powershell -ExecutionPolicy Bypass -File scripts\bootstrap.ps1 -Check`）
+- 然后执行：`bash scripts/bootstrap.sh`（Windows 去掉 `-Check`）
+- 它的行为：装 npm 依赖 → **优先复用系统 Chrome/Edge（0 下载）**，两者都没有才下载约 570MB 的 Playwright Chromium → 生成 config.json
+- **不要擅自安装定时任务**（`install-launchd.sh` / `install-service.ps1`），等我要求再装
+- 如果失败，把关键报错贴给我，不要自己反复重装
 
-### 步骤 5：登录引导（需要我本人操作）
+### 步骤 5：启动控制台并引导登录（需要我本人操作）
+- 执行 `node src/index.js web`，然后告诉我打开 http://127.0.0.1:7788
+- 提醒我：点平台卡片上的「去登录 / 打开客户端 / 去下载」，按提示完成一次登录
+
+### 步骤 6：登录引导（需要我本人操作）
 - WorkBuddy：告诉我「打开 WorkBuddy 客户端扫码登录」，我确认后再继续
 - 智谱清言：替我执行 npm run login，并告诉我需要在弹出的浏览器里扫码；完成后按回车保存
 - Trae CN / Qoder CN（如果我需要）：告诉我先去各自客户端登录
