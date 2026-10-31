@@ -36,6 +36,15 @@
 
 ---
 
+## 1.5 先选平台（可选）
+
+```bash
+npm run setup -- --check    # 看清单 + 每个平台还差什么
+npm run setup               # 勾选要用的平台
+```
+
+只想不装任何客户端：`npm run setup -- --web-only`（MiniMax、智谱）。
+
 ## 2. 装早八
 
 ```bash

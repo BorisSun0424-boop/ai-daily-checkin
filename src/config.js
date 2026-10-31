@@ -58,7 +58,7 @@ const CLIENT_PLATFORM_DEFAULTS = {
     name: 'Qoder CN',
     app: platform.knownAppPaths.qoder[0],
     appCandidates: platform.knownAppPaths.qoder,
-    port: 9223,
+    port: 9224,
     cdpMode: 'arg',
     clickSelectors: ['[class*="gift"]', '[class*="Gift"]', '[class*="check-in"]', '[class*="checkin"]'],
     keywords: ['领取', '签到', '立即领取'],
