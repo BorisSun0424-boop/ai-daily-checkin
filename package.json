@@ -18,7 +18,8 @@
     "check": "bash scripts/bootstrap.sh --check",
     "schedule": "node src/index.js schedule",
     "service:install": "node src/index.js install-service",
-    "service:uninstall": "node src/index.js uninstall-service"
+    "service:uninstall": "node src/index.js uninstall-service",
+    "open": "node src/open-console.js"
   },
   "dependencies": {
     "playwright": "^1.48.0"

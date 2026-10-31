@@ -239,6 +239,46 @@ ${blocks}
 `;
 }
 
+/** Windows 计划任务 XML：错过（睡眠）后补跑 + 唤醒计算机执行 */
+export function buildWindowsTaskXml({ time, nodeBin, scriptPath }) {
+  const [h, m] = String(time).split(':').map(Number);
+  const pad = (n) => String(n).padStart(2, '0');
+  const start = `2026-01-01T${pad(h)}:${pad(m)}:00`;
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return `<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>早八 zaoba 每日自动签到</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>${start}</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+  </Triggers>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <WakeToRun>true</WakeToRun>
+    <ExecutionTimeLimit>PT2H</ExecutionTimeLimit>
+    <Enabled>true</Enabled>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>${esc(nodeBin)}</Command>
+      <Arguments>"${esc(scriptPath)}"</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+`;
+}
+
 export function schedulerLabel(base = 'com.local.ai-daily-checkin') {
   return base;
 }
@@ -272,30 +312,29 @@ export async function installScheduler({ label = 'com.local.ai-daily-checkin', p
   }
 
   if (isWindows) {
-    // 每个时间点一个计划任务（schtasks 单任务只支持一个每日时间）
     const created = [];
     for (const [i, t] of valid.entries()) {
       const taskName = i === 0 ? 'ZaobaDailyCheckin' : `ZaobaDailyCheckin${i + 1}`;
+      const xmlPath = path.join(os.tmpdir(), `zaoba-task-${i}.xml`);
+      const xmlText = buildWindowsTaskXml({ time: t, nodeBin: process.execPath, scriptPath });
+      fs.writeFileSync(xmlPath, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xmlText, 'utf16le')]));
       await exec('schtasks', ['/Delete', '/TN', taskName, '/F'], { timeout: 15000 }).catch(() => null);
-      await exec(
-        'schtasks',
-        [
-          '/Create',
-          '/F',
-          '/SC',
-          'DAILY',
-          '/ST',
-          t,
-          '/TN',
-          taskName,
-          '/TR',
-          `"${process.execPath}" "${scriptPath}"`,
-        ],
-        { timeout: 20000 },
-      );
+      try {
+        // 用 XML 注册，才能带上 WakeToRun / StartWhenAvailable
+        await exec('schtasks', ['/Create', '/TN', taskName, '/XML', xmlPath, '/F'], { timeout: 25000 });
+      } catch (e) {
+        // 回退：至少保证任务能跑
+        logger?.warn(`XML 注册失败，回退到简单模式: ${String(e.message).split('\n')[0]}`);
+        await exec(
+          'schtasks',
+          ['/Create', '/F', '/SC', 'DAILY', '/ST', t, '/TN', taskName, '/TR', `"${process.execPath}" "${scriptPath}"`],
+          { timeout: 20000 },
+        );
+      }
+      fs.rmSync(xmlPath, { force: true });
       created.push(taskName);
     }
-    logger?.info(`已创建 Windows 计划任务: ${created.join(', ')}`);
+    logger?.info(`已创建 Windows 计划任务: ${created.join(', ')}（含"错过则唤醒补跑"）`);
     return { method: 'schtasks', tasks: created, times: valid };
   }
 
@@ -381,4 +420,5 @@ export default {
   schedulerPath,
   platformNotes,
   knownAppPaths,
+  buildWindowsTaskXml,
 };

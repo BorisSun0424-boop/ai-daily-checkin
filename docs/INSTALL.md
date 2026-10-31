@@ -157,6 +157,21 @@ npm run schedule -- 08:00 --no-retry   # 关掉中午补跑
 
 > 手动改 `config.json` 之后，需要执行 `bash scripts/install-launchd.sh` 让 launchd 重新读取。
 
+## 4.8 打开控制台 & 电源设置
+
+```bash
+bash scripts/install-shortcuts.sh    # 一键入口：App + 桌面书签 + 快捷键说明
+npm run open                         # 或命令行直接打开（服务没起会自动拉起）
+```
+
+电源设置（让 08:00 的任务真的能跑）：
+
+```bash
+sudo pmset repeat wakeorpoweron MTWRFSU 07:55:00
+```
+
+锁屏**不影响**执行；系统**睡眠**才会错过（12:30 补跑兜底）。
+
 ## 5. 系统权限与电源设置
 
 ### 5.1 通知权限
