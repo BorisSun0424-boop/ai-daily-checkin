@@ -113,9 +113,13 @@ async function runMinimax({ page, logger, cfg, shotDir, shotName, dryRun }) {
     await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => null);
     await sleep(3000);
 
-    // 登录判断：只看登录弹窗/表单特征（页面其它地方可能本来就有"登录"字样）
+    // 登录判断：三种情况都算未登录
+    //   ① 出现登录弹窗/表单  ② 有「登录」按钮且看不到用户名/签到入口
     let text = await pageText(page);
-    const loginWall = /微信扫码登录|获取验证码|请输入您的手机号/.test(text);
+    const hasLoginForm = /微信扫码登录|获取验证码|请输入您的手机号/.test(text);
+    const hasUserUi = /MiniMax\d{3,}|用户\d{3,}|每日签到|签到得|今日已签到/.test(text);
+    const hasLoginButton = /(^|[^退])登录/.test(text) && !text.includes('退出登录');
+    const loginWall = hasLoginForm || (!hasUserUi && hasLoginButton);
     if (loginWall) {
       await screenshot(page, shotDir, `${shotName}-login`).catch(() => null);
       return { status: 'needs_login', detail: 'MiniMax Code 未登录，运行 npm run login:minimax 扫码登录一次' };

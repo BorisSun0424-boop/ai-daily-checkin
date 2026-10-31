@@ -372,7 +372,8 @@ function computeAction(p) {
     };
   }
   const neverRan = !p.last; // 从没跑过 → 大概率没登录过
-  if (p.needsLogin || (p.kind === 'web' && neverRan)) {
+  const failedBefore = ['not_found', 'error', 'timeout', 'uncertain'].includes(p.todayStatus);
+  if (p.needsLogin || (p.kind === 'web' && (neverRan || failedBefore))) {
     if (p.kind === 'client') {
       return {
         note: '客户端已安装，但还没登录：打开后扫码登录，再回来点「签到」',
