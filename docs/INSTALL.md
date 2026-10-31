@@ -245,6 +245,9 @@ data/log/                  日志
 | 通知 | 通知中心 | Windows 气泡通知 |
 | 客户端接管 | 已实测 | 代码已实现，**尚未真机验证**；网页类平台可直接用 |
 
+**Windows 默认用系统 Edge**（`channel: "msedge"`）：省掉 570MB 内核下载，登录窗口就是你熟悉的 Edge 外观；
+登录态仍存在独立的 `profile\` 目录，不碰你日常 Edge 的账号与书签。想改回自带 Chromium：改 `config.json` 的 `channel` 或删掉该字段。
+
 Windows 下客户端默认路径候选：
 
 ```

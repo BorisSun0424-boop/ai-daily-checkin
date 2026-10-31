@@ -3,6 +3,24 @@ import path from 'node:path';
 import { adapters, adapterById } from './adapters/index.js';
 import { runClientApp } from './adapters/clientApp.js';
 import platform from './platform.js';
+
+/** Windows 上优先用系统自带 Edge（0 下载），macOS 保持 Playwright 自带 Chromium */
+function defaultChannel() {
+  if (!platform.isWindows) return undefined;
+  const edgePaths = [
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  ];
+  return edgePaths.some((p) => {
+    try {
+      return fs.existsSync(p);
+    } catch {
+      return false;
+    }
+  })
+    ? 'msedge'
+    : undefined;
+}
 import { readJSON, writeJSON } from './util.js';
 
 export const CONFIG_FILE = path.resolve('config.json');

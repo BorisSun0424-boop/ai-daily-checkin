@@ -1,6 +1,8 @@
+import fs from 'node:fs';
 import { chromium } from 'playwright';
 import path from 'node:path';
 import { ensureDir } from './util.js';
+import platform from './platform.js';
 
 /**
  * 持久化上下文（persistent context）。
@@ -31,7 +33,23 @@ export async function launchContext(cfg, { headless, logger } = {}) {
   // channel: 'chrome' 时用本机真实 Chrome，指纹更干净（前提是已安装 Chrome）
   // headless 时用 Chromium 的"新 headless"模式（channel: 'chromium'）：
   // 旧 headless shell 的 UA/指纹特征明显，更容易被判定为爬虫。
-  if (cfg.channel) opts.channel = cfg.channel;
+  // Windows 首次运行（还没有 profile）时，优先用系统 Edge，省掉 570MB 内核下载
+  let channel = cfg.channel;
+  if (!channel && platform.isWindows && !fs.existsSync(userDataDir)) {
+    const edge = [
+      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    ].find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    });
+    if (edge) channel = 'msedge';
+  }
+
+  if (channel) opts.channel = channel;
   else if (wantHeadless) opts.channel = 'chromium';
 
   if (logger) logger.info(`启动浏览器 headless=${wantHeadless} channel=${opts.channel || 'chromium-headless-shell'} profile=${userDataDir}`);
