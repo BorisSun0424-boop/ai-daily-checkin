@@ -478,3 +478,26 @@ main {
 @media (max-width: 620px) {
   #btnSchedule { display: none; }
 }
+
+/* ---------------- setup hint chip ---------------- */
+.setup-chip {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #7a5b12;
+  background: #fff6e0;
+  border: 1px solid #f3ddb0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.setup-chip.warn {
+  color: #8c2f2f;
+  background: #ffecec;
+  border-color: #f4c9c9;
+}
+@media (max-width: 620px) {
+  .setup-chip { max-width: 150px; font-size: 10px; }
+}

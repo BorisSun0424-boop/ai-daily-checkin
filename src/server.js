@@ -51,6 +51,19 @@ export function buildState() {
     byPlatform.get(r.id).push(r);
   }
 
+  // 客户端可执行文件候选路径（用于判断「客户端是否已安装」）
+  const KNOWN_APPS = {
+    workbuddy: platform.knownAppPaths.workbuddy,
+    'doubaowork-client': platform.knownAppPaths.doubaowork,
+    doubaowork: platform.knownAppPaths.doubaowork,
+    'trae-cn': platform.knownAppPaths.trae,
+    trae: platform.knownAppPaths.trae,
+    'qoder-cn': platform.knownAppPaths.qoder,
+    qoder: platform.knownAppPaths.qoder,
+    'doubao-client': platform.knownAppPaths.doubao,
+    doubao: platform.knownAppPaths.doubao,
+  };
+
   const platforms = adapters.map((a) => {
     const list = (byPlatform.get(a.id) || []).slice().sort((x, y) => String(x.ts).localeCompare(String(y.ts)));
     const last = list[list.length - 1] || null;
@@ -61,10 +74,38 @@ export function buildState() {
     }
     const todayRec = list.filter((r) => r.date === today()).pop() || null;
     const pc = cfg.platforms[a.id] || {};
+    // 判定方式：config 里显式 type 优先；否则看是否是客户端接管类适配器
+    const mode =
+      pc.type === 'client'
+        ? 'client'
+        : pc.type === 'web'
+          ? 'web'
+          : a.clientApp || pc.app || a.id === 'workbuddy'
+            ? 'client'
+            : 'web';
+    const cands = pc.appCandidates || (pc.app ? [pc.app] : KNOWN_APPS[a.id] || []);
+    const clientInstalled = mode === 'client' ? cands.some((x) => x && fs.existsSync(x)) : null;
+    const loginStatuses = [todayRec?.status, last?.status].filter(Boolean);
+    const needsLogin = loginStatuses.includes('needs_login');
+    const setupHint =
+      mode === 'client' && clientInstalled === false
+        ? '需先安装客户端'
+        : needsLogin
+          ? mode === 'client'
+            ? '需在客户端里登录一次'
+            : '需登录一次：npm run login'
+          : !last
+            ? mode === 'client'
+              ? '尚未运行（确认客户端已登录）'
+              : '尚未运行（先 npm run login 登录）'
+            : '';
     return {
       id: a.id,
       name: a.name,
-      kind: a.standalone || a.clientApp ? 'client' : 'web',
+      kind: mode,
+      clientInstalled,
+      needsLogin,
+      setupHint,
       enabled: !!pc.enabled,
       notes: a.notes || '',
       last: last

@@ -108,6 +108,14 @@ function renderPlatforms() {
     const title = el('div', 'card-title');
     title.append(el('h3', '', p.name));
     title.append(el('span', `badge ${p.kind}`, p.kind === 'client' ? '客户端' : '网页'));
+    if (p.setupHint) {
+      const warn = p.kind === 'client' && p.clientInstalled === false;
+      const chip = el('span', `setup-chip${warn ? ' warn' : ''}`, p.setupHint);
+      chip.title = warn
+        ? '这个平台的签到在桌面客户端里，需要先安装客户端'
+        : '还没登录过这个平台，按提示登录一次即可';
+      title.append(chip);
+    }
     top.append(title);
 
     const st = p.enabled ? statusOf(p.todayStatus || 'none') : statusOf('disabled');
