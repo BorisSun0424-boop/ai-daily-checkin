@@ -130,6 +130,15 @@ body {
 .btn.ghost { background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(8px); }
 .btn.tiny { font-size: 12px; padding: 5px 10px; border-radius: 8px; font-weight: 500; color: var(--ink-2); }
 
+/* primary 的白色文字优先级要高于 .tiny 的灰色（否则紫底上压深灰字，几乎看不清） */
+.btn.tiny.primary,
+.btn.primary.btn.tiny {
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(31, 42, 90, 0.25);
+}
+.btn.tiny.primary:hover { color: #ffffff; }
+
 /* ---------------- layout ---------------- */
 main {
   position: relative;
