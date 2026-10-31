@@ -47,16 +47,24 @@
       </section>
 
       <div class="columns">
-        <section class="panel">
+        <section class="panel panel-wide">
           <div class="panel-head">
-            <h2>运行日志</h2>
+            <h2>积分到期</h2>
+            <span class="muted">按已知规则推算 · 以平台实际为准</span>
+          </div>
+          <div id="expiry" class="expiry-list"><span class="muted">计算中…</span></div>
+        </section>
+
+        <details class="panel advanced">
+          <summary class="panel-head">
+            <h2>运行日志 <span class="muted" style="font-weight:400">（排障用，点开查看）</span></h2>
             <div class="head-actions">
               <span class="live" id="liveBadge" hidden>● 实时</span>
               <button class="btn tiny" id="btnClearLog">清空</button>
             </div>
-          </div>
+          </summary>
           <pre class="log" id="log"><span class="muted">等待运行… 点击「全部签到」或单个平台的「签到」开始</span></pre>
-        </section>
+        </details>
 
         <details class="panel advanced">
           <summary class="panel-head">

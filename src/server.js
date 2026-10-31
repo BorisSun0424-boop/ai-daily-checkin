@@ -37,6 +37,47 @@ function lastDates(n) {
   return out;
 }
 
+/** 积分有效期规则（与 docs/CREDITS.md 保持一致） */
+function expiryOf(id, last) {
+  const addDays = (dateStr, n) => {
+    if (!dateStr) return null;
+    const d = new Date(`${dateStr}T00:00:00`);
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const daysLeft = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(`${dateStr}T23:59:59`);
+    return Math.ceil((d - Date.now()) / 86400000);
+  };
+  const claimed = last && ['success', 'already'].includes(last.status) ? last.date : null;
+
+  switch (id) {
+    case 'minimax': {
+      const until = addDays(claimed, 30);
+      return { text: '签到积分 30 天有效（仅限 Code 使用）', date: until, daysLeft: daysLeft(until) };
+    }
+    case 'workbuddy': {
+      const end = last?.meta?.endTime ? String(last.meta.endTime).slice(0, 10) : null;
+      return {
+        text: end ? `签到活动截止 ${end}；付费积分每月底清零` : '付费积分每月底清零；签到活动有截止日',
+        date: end,
+        daysLeft: daysLeft(end),
+      };
+    }
+    case 'zhipu':
+      return { text: '登录积分未明示；体验卡类 7 天有效', date: null, daysLeft: null };
+    case 'trae-cn':
+      return { text: '官方称不同渠道有效期不同（未统一明示）', date: null, daysLeft: null };
+    case 'doubaowork-client':
+      return { text: '额度有效期未明示，按活动页', date: null, daysLeft: null };
+    case 'qoder-cn':
+      return { text: '当日有效：10:00 → 次日 10:00，错过不补', date: null, daysLeft: 1 };
+    default:
+      return null;
+  }
+}
+
 /** 「去登录」按钮的状态（同一时间只允许一个登录窗口） */
 const loginState = { id: null, proc: null, status: 'idle', startedAt: null, code: null };
 
@@ -117,6 +158,7 @@ export function buildState() {
       downloadUrl: mode === 'client' ? platform.downloadUrls[a.id] || '' : '',
       appPath: mode === 'client' ? cands[0] || '' : '',
       setupHint,
+      expiry: expiryOf(a.id, last),
       enabled: !!pc.enabled,
       notes: a.notes || '',
       last: last

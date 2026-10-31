@@ -208,6 +208,38 @@ function renderPlatforms() {
     card.append(foot);
     grid.append(card);
   }
+
+  renderExpiry(list);
+}
+
+/** 积分到期面板 */
+function renderExpiry(list) {
+  const box = $('#expiry');
+  if (!box) return;
+  box.replaceChildren();
+  const rows = list
+    .filter((p) => p.enabled && p.expiry)
+    .sort((a, b) => (a.expiry.daysLeft ?? 9999) - (b.expiry.daysLeft ?? 9999));
+
+  if (!rows.length) {
+    box.append(el('span', 'muted', '暂无可计算的到期时间'));
+    return;
+  }
+
+  for (const p of rows) {
+    const row = el('div', 'expiry-row');
+    row.append(el('div', 'e-name', p.name));
+    const right = el('div', 'e-right');
+    if (p.expiry.daysLeft != null) {
+      const cls = p.expiry.daysLeft <= 1 ? 'danger' : p.expiry.daysLeft <= 7 ? 'warn' : 'ok';
+      const label = p.expiry.daysLeft <= 0 ? '已过期' : `${p.expiry.daysLeft} 天`;
+      right.append(el('b', `e-days ${cls}`, label));
+    }
+    if (p.expiry.date) right.append(el('span', 'e-date', p.expiry.date));
+    const text = el('div', 'e-text', p.expiry.text);
+    row.append(text, right);
+    box.append(row);
+  }
 }
 
 function chip(k, v) {
